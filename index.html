@@ -70,6 +70,14 @@
         max-width: 100% !important;
       }
 
+      @keyframes pulseSubtle {
+        0%, 100% { opacity: 1; transform: scale(1.03); }
+        50% { opacity: 0.85; transform: scale(1.01); }
+      }
+      .animate-pulse-subtle {
+        animation: pulseSubtle 2.5s infinite ease-in-out;
+      }
+
       /* Ultra-prominent Input & Selector Custom Styling Override */
       input[type="text"],
       input[type="number"],
@@ -637,6 +645,7 @@
                   <div class="flex gap-2 font-medium">
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-profit/30 border border-profit/50 block"></span>獲利日</span>
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-loss/30 border border-loss/50 block"></span>虧損日</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50 border border-amber-500 block animate-pulse"></span>建倉/持倉</span>
                   </div>
                   <div>點擊日期篩選當天</div>
                 </div>
@@ -660,6 +669,7 @@
                 <!-- Filter buttons -->
                 <div class="flex flex-wrap gap-2" id="log-filter-buttons">
                   <button onclick="setLogFilter('全部')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all">全部</button>
+                  <button onclick="setLogFilter('未平倉')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">未平倉</button>
                   <button onclick="setLogFilter('🟢好交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🟢 好交易</button>
                   <button onclick="setLogFilter('🔴壞交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🔴 壞交易</button>
                   <button onclick="setLogFilter('獲利')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">獲利</button>
@@ -2105,15 +2115,21 @@
       function setLogFilter(filterName) {
         state.logFilter = filterName;
 
+        if (filterName === '全部') {
+          state.logSelectedDate = null;
+        }
+
         // Style buttons
         document.querySelectorAll('#log-filter-buttons button').forEach(b => {
-          if (b.innerText.includes(filterName)) {
+          const clicks = b.getAttribute('onclick') || '';
+          if (clicks.includes("'" + filterName + "'")) {
             b.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all";
           } else {
             b.className = "px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all";
           }
         });
         renderLog();
+        renderCalendar();
       }
 
       function triggerLogSearch(term) {
@@ -2156,15 +2172,17 @@
           );
         }
 
-        // Dropdown categorizations 
+        // Dropdown/tab categorizations 
         if (state.logFilter === '🟢好交易') {
           processed = processed.filter(tr => tr.rating === '🟢好交易');
         } else if (state.logFilter === '🔴壞交易') {
           processed = processed.filter(tr => tr.rating === '🔴壞交易');
         } else if (state.logFilter === '獲利') {
-          processed = processed.filter(tr => Number(tr.netPnL) > 0);
+          processed = processed.filter(tr => Number(tr.netPnL) > 0 && tr.isClosed !== false);
         } else if (state.logFilter === '虧損') {
-          processed = processed.filter(tr => Number(tr.netPnL) < 0);
+          processed = processed.filter(tr => Number(tr.netPnL) < 0 && tr.isClosed !== false);
+        } else if (state.logFilter === '未平倉') {
+          processed = processed.filter(tr => tr.isClosed === false);
         }
 
         // Sorting
@@ -2454,12 +2472,15 @@
           let stateClasses = "bg-terminal-bg/30 text-gray-400 border-terminal-accent/10 hover:bg-terminal-accent/30 hover:text-white ";
 
           if (dayTradesCount > 0) {
-            if (dayNetPnL > 0) {
+            const hasHolding = dayTrades.some(tr => tr.isClosed === false);
+            if (hasHolding) {
+              stateClasses = "bg-[#3e240a]/90 border-[#f59e0b] hover:bg-[#52300e] text-amber-100 font-extrabold ring-1 ring-[#f59e0b]/40 shadow-[0_0_12px_rgba(245,158,11,0.4)] scale-[1.03] animate-pulse-subtle ";
+            } else if (dayNetPnL > 0) {
               stateClasses = "bg-[#0b2d18]/90 border-[#10b981] hover:bg-[#114a26] text-white font-bold ring-1 ring-[#10b981]/30 shadow-[0_0_10px_rgba(16,185,129,0.3)] scale-[1.02] ";
             } else if (dayNetPnL < 0) {
               stateClasses = "bg-[#3e1315]/90 border-[#f43f5e] hover:bg-[#5c1c20] text-white font-bold ring-1 ring-[#f43f5e]/30 shadow-[0_0_10px_rgba(244,63,94,0.3)] scale-[1.02] ";
             } else {
-              stateClasses = "bg-slate-800/90 border-[#94a3b8] hover:bg-[#334155] text-white font-bold ring-1 ring-[#94a3b8]/30 shadow-[0_0_8px_rgba(148,163,184,0.25)] scale-[1.02] ";
+              stateClasses = "bg-slate-700 border-slate-400 hover:bg-slate-600 text-white font-bold ring-1 ring-slate-400/30 shadow-md scale-[1.02] ";
             }
           }
 
