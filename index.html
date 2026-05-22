@@ -347,10 +347,10 @@
           <div class="bg-terminal-card rounded-xl border border-terminal-accent shadow-lg overflow-hidden">
             <div class="p-5 border-b border-terminal-accent bg-terminal-accent/10 flex justify-between items-center">
               <div>
-                <h2 class="text-lg font-bold flex items-center gap-2 text-white">
+                <h2 id="form-title-h2" class="text-lg font-bold flex items-center gap-2 text-white">
                   <span>➕</span> 覆盤新交易
                 </h2>
-                <span class="text-xs text-gray-400">請如實填寫當下動能框架與身心狀態，唯有誠實才能看清真相。</span>
+                <span id="form-title-subtext" class="text-xs text-gray-400">請如實填寫當下動能框架與身心狀態，唯有誠實才能看清真相。</span>
               </div>
               <span class="text-xs bg-terminal-accent px-2 py-1 rounded text-gray-400 font-mono">快捷鍵：Ctrl+Enter 儲存</span>
             </div>
@@ -435,6 +435,22 @@
                   </div>
                 </div>
 
+                <!-- Live holding / Completed trade toggle -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5 flex items-center gap-1.5 select-none">
+                    <span>🔄</span> 覆盤交易模式 (一鍵建立買入/未平倉持倉)
+                  </label>
+                  <div class="grid grid-cols-2 gap-2 bg-terminal-bg p-1.5 border border-terminal-accent rounded-xl">
+                    <button type="button" id="status-active" onclick="setTradeStatus(false)" class="py-2.5 px-3.5 text-xs font-semibold rounded-lg text-gray-400 hover:text-white transition-all select-none cursor-pointer flex items-center justify-center gap-1.5">
+                      <span class="text-sm">⏳</span> 建立買入持倉 (未平倉 - 待日後賣出)
+                    </button>
+                    <button type="button" id="status-closed" onclick="setTradeStatus(true)" class="py-2.5 px-3.5 text-xs font-semibold rounded-lg bg-terminal-accent text-white transition-all select-none cursor-pointer flex items-center justify-center gap-1.5">
+                      <span class="text-sm">✅</span> 完整平倉覆盤 (已平倉 - 當下一次填寫進出場)
+                    </button>
+                    <input type="hidden" id="trade-is-closed" value="true">
+                  </div>
+                </div>
+
                 <!-- Entry details (Date + price) -->
                 <div class="bg-terminal-bg/35 border border-terminal-accent/40 rounded-xl p-4 space-y-3">
                   <div class="text-xs text-gray-400 font-bold border-b border-terminal-accent/30 pb-1.5">🟢 進場設定</div>
@@ -458,7 +474,7 @@
                 </div>
 
                 <!-- Exit details (Date + price) -->
-                <div class="bg-terminal-bg/35 border border-terminal-accent/40 rounded-xl p-4 space-y-3">
+                <div id="exit-settings-section" class="bg-terminal-bg/35 border border-terminal-accent/40 rounded-xl p-4 space-y-3">
                   <div class="text-xs text-gray-400 font-bold border-b border-terminal-accent/30 pb-1.5">🔴 出場設定</div>
                   <div>
                     <label class="block text-[11px] text-gray-400 mb-1">出場日期</label>
@@ -573,7 +589,7 @@
                 <button type="button" onclick="clearTradeForm()" class="px-5 py-2.5 border border-terminal-accent hover:bg-[#1C2330] rounded-lg text-xs font-semibold cursor-pointer select-none text-gray-400 hover:text-white transition-all">
                   清除欄位
                 </button>
-                <button type="submit" class="px-8 py-2.5 bg-profit hover:bg-profit/90 active:scale-[0.98] rounded-lg text-xs font-bold text-white transition-all shadow-md cursor-pointer select-none flex items-center justify-center gap-1.5">
+                <button type="submit" id="new-trade-submit-btn" class="px-8 py-2.5 bg-profit hover:bg-profit/90 active:scale-[0.98] rounded-lg text-xs font-bold text-white transition-all shadow-md cursor-pointer select-none flex items-center justify-center gap-1.5 animate-all">
                   📁 儲存交易記錄
                 </button>
               </div>
@@ -673,6 +689,11 @@
                   <button onclick="exportTradesToCSV()" class="px-3.5 py-1.5 bg-terminal-accent hover:bg-terminal-accent/80 text-white border border-terminal-accent/60 rounded-lg text-xs font-semibold select-none flex items-center justify-center gap-1.5 cursor-pointer hover:border-profit transition-all">
                     📤 匯出 CSV
                   </button>
+
+                  <!-- Direct Clear Trades Action -->
+                  <button onclick="clearTradesOnly()" class="px-3.5 py-1.5 border border-warning/45 hover:bg-warning/10 text-warning rounded-lg text-xs font-semibold select-none flex items-center justify-center gap-1.5 cursor-pointer transition-all">
+                    🧹 一鍵清空交易
+                  </button>
                 </div>
 
               </div>
@@ -692,7 +713,7 @@
                         <th class="px-4 py-3 font-semibold text-right">出場價</th>
                         <th class="px-4 py-3 font-semibold text-right">淨損益 (NTD)</th>
                         <th class="px-4 py-3 font-semibold text-center">評等/狀態</th>
-                        <th class="px-4 py-3 w-12 text-center">操作</th>
+                        <th class="px-4 py-3 w-36 text-center select-none">操作</th>
                       </tr>
                     </thead>
                     <tbody id="log-trades-body" class="divide-y divide-terminal-accent/30 font-medium">
@@ -836,31 +857,65 @@
             <!-- Import and Wipe controls block -->
             <div class="space-y-4">
               <h4 class="text-xs text-gray-400 font-bold uppercase tracking-widest font-mono">資料備份與還原</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 <!-- CSV import button wrapper -->
                 <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
                   <div>
-                    <h5 class="text-xs font-bold text-gray-300">匯入覆盤記錄 (CSV)</h5>
-                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">支援匯入備份後的 CSV 格式檔案，本機暫存會被覆蓋或合併。</p>
+                    <h5 class="text-xs font-bold text-gray-300 flex items-center gap-1">
+                      <span>📥</span> 匯入覆盤記錄 (CSV)
+                    </h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">支援匯入您備份的 CSV 格式明細，本機暫存會被覆蓋或合併。</p>
                   </div>
                   <div class="mt-4">
-                    <label class="px-4 py-2 bg-terminal-accent hover:bg-[#1a2e54] text-white rounded-lg text-xs font-semibold select-none cursor-pointer flex items-center justify-center gap-1">
+                    <label class="px-4 py-2 bg-terminal-accent hover:bg-[#1a2e54] text-white rounded-lg text-xs font-semibold select-none cursor-pointer flex items-center justify-center gap-1 transition-all">
                       📥 選擇 CSV 檔案...
                       <input type="file" id="settings-csv-import" accept=".csv" onchange="importTradesFromCSV(event)" class="hidden">
                     </label>
                   </div>
                 </div>
 
-                <!-- Wipe capital -->
+                <!-- Clear trades empty state -->
                 <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
                   <div>
-                    <h5 class="text-xs font-bold text-loss">一鍵初始化 (清除所有損益)</h5>
-                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">清除 local storage 所有交易與設定，回復成初始展示資料。</p>
+                    <h5 class="text-xs font-bold text-warning flex items-center gap-1">
+                      <span>🧹</span> 單獨清空交易明細 (乾淨開始)
+                    </h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">清空所有交易歷史 (0筆)，但<strong>保留您的初始資金、預設手續費與口數設定</strong>。讓您能直接輸入實盤持倉。</p>
                   </div>
                   <div class="mt-4">
-                    <button onclick="wipeAllData()" class="w-full px-4 py-2 bg-loss hover:bg-loss/90 text-white rounded-lg text-xs font-bold select-none cursor-pointer">
-                      💥 清除所有資料 (大盤重整)
+                    <button onclick="clearTradesOnly()" class="w-full px-4 py-2 border border-warning/40 hover:bg-warning/10 text-warning rounded-lg text-xs font-bold select-none cursor-pointer transition-all">
+                      🧹 立即清空歷史交易 (推薦乾淨實盤)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Restore demo data -->
+                <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h5 class="text-xs font-bold text-blue-400 flex items-center gap-1">
+                      <span>🔄</span> 載入預設示範交易
+                    </h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">重新載入系統自帶的複盤示範交易明細，便於在熟悉平台前直接參閱走勢、動能及期望值走勢圖。</p>
+                  </div>
+                  <div class="mt-4">
+                    <button onclick="restoreDemoTrades()" class="w-full px-4 py-2 border border-blue-400/40 hover:bg-blue-400/10 text-blue-400 rounded-lg text-xs font-bold select-none cursor-pointer transition-all">
+                      🔄 載入模擬示範資料
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Wipe all settings and capital -->
+                <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h5 class="text-xs font-bold text-loss flex items-center gap-1">
+                      <span>💥</span> 徹底初始化 (大盤重整)
+                    </h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">清除本機 Local Storage 中所有的交易明細、所有偏好選項與預設參數，並重整重啟。</p>
+                  </div>
+                  <div class="mt-4">
+                    <button onclick="wipeAllData()" class="w-full px-4 py-2 bg-loss hover:bg-loss/90 text-white rounded-lg text-xs font-bold select-none cursor-pointer transition-all">
+                      💥 徹底清空所有設定與資料
                     </button>
                   </div>
                 </div>
@@ -993,6 +1048,7 @@
         trades: [],
         settings: { ...DEFAULT_SETTINGS },
         currentTab: 'dashboard',
+        editingTradeId: null,
         logFilter: '全部',
         logSearch: '',
         logSort: 'date-desc',
@@ -1173,8 +1229,10 @@
 
       function recalculateCoreStats() {
         const sortedTrades = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        const closedTrades = sortedTrades.filter(tr => tr.isClosed !== false);
+        const activeTradesCount = sortedTrades.filter(tr => tr.isClosed === false).length;
         
-        let count = sortedTrades.length;
+        let count = closedTrades.length;
         let cumulativeNet = 0;
         let goodCount = 0;
         let badCount = 0;
@@ -1184,15 +1242,15 @@
         let winSum = 0;
         let lossSum = 0;
 
-        sortedTrades.forEach(tr => {
-          cumulativeNet += Number(tr.netPnL);
+        closedTrades.forEach(tr => {
+          cumulativeNet += Number(tr.netPnL || 0);
           if (tr.rating === '🟢好交易') goodCount++;
           if (tr.rating === '🔴壞交易') badCount++;
 
-          if (Number(tr.netPnL) > 0) {
+          if (Number(tr.netPnL || 0) > 0) {
             winCount++;
             winSum += Number(tr.netPnL);
-          } else if (Number(tr.netPnL) < 0) {
+          } else if (Number(tr.netPnL || 0) < 0) {
             lossCount++;
             lossSum += Number(tr.netPnL);
           }
@@ -1223,8 +1281,8 @@
         let peak = initialCapital;
         let runningCapital = initialCapital;
 
-        sortedTrades.forEach(tr => {
-          runningCapital += Number(tr.netPnL);
+        closedTrades.forEach(tr => {
+          runningCapital += Number(tr.netPnL || 0);
           if (runningCapital > peak) {
             peak = runningCapital;
           }
@@ -1249,7 +1307,7 @@
           pnlEl.className = "text-xl md:text-2xl font-bold font-mono tracking-tight text-gray-300";
         }
 
-        document.getElementById('stat-trade-count').innerText = `累積成交: ${statsCache.tradeCount} 筆`;
+        document.getElementById('stat-trade-count').innerHTML = `累積成交: <span class="text-white">${statsCache.tradeCount}</span> 筆${activeTradesCount > 0 ? ` / <span class="text-warning animate-pulse font-bold">持倉中: ${activeTradesCount}</span> 筆` : ''}`;
         
         // Percentage Equity Change
         const changePct = (statsCache.totalNetPnL / initialCapital) * 100;
@@ -1347,10 +1405,28 @@
           `;
         } else {
           latest5.forEach(tr => {
-            const trValue = Number(tr.netPnL);
+            const trValue = Number(tr.netPnL || 0);
+            const isClosed = tr.isClosed !== false;
             const entryFormatted = tr.entryDate.substring(5); // MM-DD
-            const trColor = trValue > 0 ? 'text-profit' : (trValue < 0 ? 'text-loss' : 'text-gray-300');
-            const sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+            
+            let trColor = "text-gray-300";
+            let sign = "$";
+            let priceFlowStr = "";
+            let pnlDisplayStr = "";
+            let ratingDisplayStr = "";
+
+            if (isClosed) {
+              trColor = trValue > 0 ? 'text-profit' : (trValue < 0 ? 'text-loss' : 'text-gray-300');
+              sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+              priceFlowStr = `${tr.entryPrice} → ${tr.exitPrice}`;
+              pnlDisplayStr = `${sign}${formatNumber(Math.abs(trValue))}${trValue > 0 ? '<span class="text-[9px] ml-1 opacity-70">🎯</span>' : ''}`;
+              ratingDisplayStr = tr.rating ? tr.rating.substring(0, 2) : "🟢";
+            } else {
+              trColor = "text-warning";
+              priceFlowStr = `${tr.entryPrice} → <span class="text-warning animate-pulse font-bold">持倉⌛</span>`;
+              pnlDisplayStr = `<span class="text-[10px] bg-orange-950/20 text-warning border border-warning/15 px-1.5 py-0.5 rounded-lg select-none outline-none font-sans font-bold">持倉觀察中</span>`;
+              ratingDisplayStr = "⏳";
+            }
             
             const trRow = document.createElement('tr');
             trRow.className = "hover:bg-terminal-accent/15 cursor-pointer transition-colors";
@@ -1365,12 +1441,11 @@
                   ${tr.position}
                 </span>
               </td>
-              <td class="px-4 py-4.5 text-xs text-gray-300 font-mono">${tr.entryPrice} → ${tr.exitPrice}</td>
+              <td class="px-4 py-4.5 text-xs font-mono">${priceFlowStr}</td>
               <td class="px-4 py-4.5 text-sm font-bold ${trColor} font-mono">
-                ${sign}${formatNumber(Math.abs(trValue))}
-                ${trValue > 0 ? '<span class="text-[9px] ml-1 opacity-70">🎯</span>' : ''}
+                ${pnlDisplayStr}
               </td>
-              <td class="px-4 py-4.5 text-center text-base select-none">${tr.rating.substring(0,2)}</td>
+              <td class="px-4 py-4.5 text-center text-base select-none">${ratingDisplayStr}</td>
             `;
             recentBody.appendChild(trRow);
           });
@@ -1587,6 +1662,48 @@
         updateFormCalculations();
       }
 
+      function setTradeStatus(isClosed) {
+        document.getElementById('trade-is-closed').value = isClosed ? "true" : "false";
+
+        const btnActive = document.getElementById('status-active');
+        const btnClosed = document.getElementById('status-closed');
+        const exitSection = document.getElementById('exit-settings-section');
+
+        const exitPriceInput = document.getElementById('trade-exit-price');
+        const exitDateInput = document.getElementById('trade-exit-date');
+        const exitReasonInput = document.getElementById('trade-exit-reason');
+
+        if (isClosed) {
+          btnClosed.className = "py-2.5 px-3.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent/30 flex-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+          btnActive.className = "py-2.5 px-3.5 text-xs font-medium rounded-lg bg-terminal-bg text-gray-400 border border-terminal-accent/20 hover:text-white hover:bg-[#1C2330] flex-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+          
+          if (exitSection) {
+            exitSection.classList.remove('hidden');
+          }
+          if (exitPriceInput) exitPriceInput.setAttribute('required', 'true');
+          if (exitDateInput) exitDateInput.setAttribute('required', 'true');
+          if (exitReasonInput) exitReasonInput.setAttribute('required', 'true');
+        } else {
+          btnActive.className = "py-2.5 px-3.5 text-xs font-bold rounded-lg bg-orange-950/40 text-warning border border-warning/40 shadow shadow-warning/10 flex-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+          btnClosed.className = "py-2.5 px-3.5 text-xs font-medium rounded-lg bg-terminal-bg text-gray-400 border border-terminal-accent/20 hover:text-white hover:bg-[#1C2330] flex-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+          
+          if (exitSection) {
+            exitSection.classList.add('hidden');
+          }
+          if (exitPriceInput) {
+            exitPriceInput.removeAttribute('required');
+            exitPriceInput.value = '';
+          }
+          if (exitDateInput) {
+            exitDateInput.removeAttribute('required');
+            exitDateInput.value = '';
+          }
+          if (exitReasonInput) {
+            exitReasonInput.removeAttribute('required');
+          }
+        }
+      }
+
       function setPositionAttr(pos) {
         document.getElementById('trade-position').value = pos;
         
@@ -1727,14 +1844,30 @@
         }
       }
 
-      function clearTradeForm() {
+       function clearTradeForm() {
+        state.editingTradeId = null;
         document.getElementById('new-trade-form').reset();
         document.getElementById('trade-entry-date').value = getTodayDateString();
         document.getElementById('trade-exit-date').value = getTodayDateString();
         setPointValue(state.settings.defaultPointValue);
         setPositionAttr('底倉');
         setRating('🟢好交易');
+        setTradeStatus(true);
         updateFormCalculations();
+
+        // Restore title and texts to non-editing mode
+        const titleH2 = document.getElementById('form-title-h2');
+        if (titleH2) {
+          titleH2.innerHTML = '<span>➕</span> 覆盤新交易';
+        }
+        const subtext = document.getElementById('form-title-subtext');
+        if (subtext) {
+          subtext.innerText = '請如實填寫當下動能框架與身心狀態，唯有誠實才能看清真相。';
+        }
+        const submitBtn = document.getElementById('new-trade-submit-btn');
+        if (submitBtn) {
+          submitBtn.innerHTML = '📁 儲存交易記錄';
+        }
       }
 
       async function triggerAiReview() {
@@ -1815,38 +1948,50 @@
           return;
         }
 
+        const isClosed = document.getElementById('trade-is-closed').value === "true";
         const entryDateVal = document.getElementById('trade-entry-date').value;
-        const exitDateVal = document.getElementById('trade-exit-date').value;
-
-        if (new Date(exitDateVal) < new Date(entryDateVal)) {
-          alert('⚠️ 異常：出場日期不可早於進場日期！');
-          return;
-        }
-
         const entryPrice = parseFloat(document.getElementById('trade-entry-price').value) || 0;
-        const exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
         const qty = parseInt(document.getElementById('trade-qty').value) || 1;
         const pointValue = parseInt(document.getElementById('trade-point-value').value) || 2000;
         const fee = parseFloat(document.getElementById('trade-fee').value) || 0;
 
-        const grossPnL = (exitPrice - entryPrice) * qty * pointValue;
-        const netPnL = grossPnL - fee;
+        let exitDateVal = "";
+        let exitPrice = 0;
+        let exitReason = "持倉中，尚未平倉";
+        let grossPnL = 0;
+        let netPnL = 0;
+        let ratingVal = document.getElementById('trade-rating').value;
 
-        const ratingVal = document.getElementById('trade-rating').value;
-        const initialCapital = Number(state.settings.initialCapital) || 500000;
-        const fivePercentOfCapital = initialCapital * 0.05;
+        if (isClosed) {
+          exitDateVal = document.getElementById('trade-exit-date').value;
+          exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
+          exitReason = document.getElementById('trade-exit-reason').value;
 
-        if (ratingVal === '🔴壞交易' && netPnL < 0 && Math.abs(netPnL) > fivePercentOfCapital) {
-          const userConfirmed = confirm("⚠️ 此筆損失已達高風險水準，請務必於備註中詳細說明停損未執行的原因。\n\n確定要立即儲存此筆交易嗎？");
-          if (!userConfirmed) {
-            // Guide focus to reflection note for compliance
-            document.getElementById('trade-note').focus();
+          if (exitDateVal && entryDateVal && new Date(exitDateVal) < new Date(entryDateVal)) {
+            alert('⚠️ 異常：出場日期不可早於進場日期！');
             return;
           }
+
+          grossPnL = (exitPrice - entryPrice) * qty * pointValue;
+          netPnL = grossPnL - fee;
+
+          const initialCapital = Number(state.settings.initialCapital) || 500000;
+          const fivePercentOfCapital = initialCapital * 0.05;
+
+          if (ratingVal === '🔴壞交易' && netPnL < 0 && Math.abs(netPnL) > fivePercentOfCapital) {
+            const userConfirmed = confirm("⚠️ 此筆損失已達高風險水準，請務必於備註中詳細說明停損未執行的原因。\n\n確定要立即儲存此筆交易嗎？");
+            if (!userConfirmed) {
+              document.getElementById('trade-note').focus();
+              return;
+            }
+          }
+        } else {
+          // Setting neutral/holding values
+          grossPnL = 0;
+          netPnL = 0;
         }
 
-        const newObj = {
-          id: Date.now().toString(),
+        const tradeData = {
           code: codeInput,
           name: document.getElementById('trade-name').value.trim(),
           type: document.querySelector('input[name="trade-type"]:checked').value,
@@ -1859,22 +2004,38 @@
           pointValue: pointValue,
           fee: fee,
           entryReason: document.getElementById('trade-entry-reason').value,
-          exitReason: document.getElementById('trade-exit-reason').value,
+          exitReason: exitReason,
           mentalState: document.getElementById('trade-mental-state').value,
-          rating: document.getElementById('trade-rating').value,
+          rating: ratingVal,
           note: document.getElementById('trade-note').value.trim(),
           grossPnL: grossPnL,
-          netPnL: netPnL
+          netPnL: netPnL,
+          isClosed: isClosed
         };
 
-        state.trades.push(newObj);
-        saveDataToStorage();
-        
-        // Visual notification
-        alert("🎉 儲存成功！此筆交易已記入動能覆盤資料。");
-        
+        if (state.editingTradeId) {
+          const editIdx = state.trades.findIndex(t => t.id === state.editingTradeId);
+          if (editIdx !== -1) {
+            tradeData.id = state.editingTradeId;
+            state.trades[editIdx] = tradeData;
+            saveDataToStorage();
+            alert("✏️ 交易修改已成功儲存！期望值與走勢圖已同步更新。");
+          } else {
+            tradeData.id = Date.now().toString();
+            state.trades.push(tradeData);
+            saveDataToStorage();
+            alert("🎉 儲存成功！此筆交易已記入動能覆盤資料。");
+          }
+        } else {
+          tradeData.id = Date.now().toString();
+          state.trades.push(tradeData);
+          saveDataToStorage();
+          alert("🎉 儲存成功！此筆交易已記入動能覆盤資料。");
+        }
+
+        const wasEditing = !!state.editingTradeId;
         clearTradeForm();
-        switchTab('dashboard');
+        switchTab(wasEditing ? 'log' : 'dashboard');
       }
 
       // ==========================================
@@ -1968,19 +2129,53 @@
           emptyState.classList.add('hidden');
           
           processed.forEach(tr => {
-            const trValue = Number(tr.netPnL);
-            const isProfit = trValue > 0;
-            const trColor = isProfit ? 'text-profit' : (trValue < 0 ? 'text-loss' : 'text-gray-300');
-            const sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+            const trValue = Number(tr.netPnL || 0);
+            const isClosed = tr.isClosed !== false;
+            
+            let trColor = "text-gray-300";
+            let sign = "$";
+            if (isClosed) {
+              trColor = trValue > 0 ? "text-profit" : (trValue < 0 ? "text-loss" : "text-gray-300");
+              sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+            }
             
             const trRow = document.createElement('tr');
             trRow.className = "hover:bg-terminal-accent/10 border-b border-terminal-accent/20 cursor-pointer font-medium transition-colors";
             trRow.id = `row-summary-${tr.id}`;
             trRow.setAttribute('onclick', `toggleAccordion('${tr.id}')`);
 
+            const dateStr = isClosed 
+              ? `${tr.entryDate.substring(5)} → ${tr.exitDate.substring(5)}`
+              : `${tr.entryDate.substring(5)} → <span class="text-warning font-sans inline-flex items-center gap-0.5 animate-pulse font-bold text-[10px] bg-warning/15 border border-warning/35 px-1 rounded shadow-sm"><span class="h-1 w-1 bg-warning rounded-full"></span>持倉⏳</span>`;
+
+            const exitPriceStr = isClosed ? tr.exitPrice.toFixed(1) : `<span class="text-warning text-xs select-none">⌛ 持倉</span>`;
+
+            const pnlStr = isClosed 
+              ? `${sign}${formatNumber(Math.abs(trValue))}${trValue > 0 ? '<span class="text-[9px] ml-1 opacity-70">🎯</span>' : ''}`
+              : `<span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-orange-400 bg-orange-950/20 border border-orange-500/25 px-2 py-0.5 rounded-lg select-none outline-none">持倉中 (未平倉)</span>`;
+
+            const ratingBadge = isClosed 
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${tr.rating === '🟢好交易' ? 'bg-green-950/40 text-profit' : 'bg-red-950/40 text-loss'}">${tr.rating}</span><span class="block text-[9.5px] text-gray-500 font-light mt-0.5">${tr.mentalState}</span>`
+              : `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-950/25 text-warning border border-warning/15">⏳ 觀察中</span><span class="block text-[9.5px] text-gray-500 font-light mt-0.5">${tr.mentalState}</span>`;
+
+            const actionButtons = isClosed 
+              ? `
+                  <button onclick="editTrade('${tr.id}')" class="px-2 py-1 text-blue-400 hover:text-white hover:bg-blue-400/20 border border-blue-400/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center gap-1 shrink-0" title="編輯交易">
+                    <span>✏️</span><span>編輯</span>
+                  </button>
+                `
+              : `
+                  <button onclick="closeTradeDirect('${tr.id}')" class="px-2 py-1.5 text-warning hover:text-white hover:bg-warning/30 border border-warning/45 bg-warning/5 rounded text-xs font-bold select-none cursor-pointer scale-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1 shrink-0" title="一鍵平倉，記錄賣出資訊">
+                    <span>⚡</span><span>平倉</span>
+                  </button>
+                  <button onclick="editTrade('${tr.id}')" class="px-1.5 py-1 text-gray-400 hover:text-white hover:bg-terminal-accent/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="編輯基本部位資訊">
+                    <span>✏️</span>
+                  </button>
+                `;
+
             trRow.innerHTML = `
               <td class="px-4 py-4.5 text-center text-xs text-gray-500 font-mono select-none" id="icon-indicator-${tr.id}">▶</td>
-              <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${tr.entryDate.substring(5)} → ${tr.exitDate.substring(5)}</td>
+              <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${dateStr}</td>
               <td class="px-4 py-4.5 font-bold text-white text-sm">
                 ${tr.code}
                 <span class="block text-[11px] font-normal text-gray-500">${tr.name}</span>
@@ -1995,18 +2190,20 @@
                 </span>
               </td>
               <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${tr.entryPrice.toFixed(1)}</td>
-              <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${tr.exitPrice.toFixed(1)}</td>
+              <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${exitPriceStr}</td>
               <td class="px-4 py-4.5 text-right text-sm font-bold ${trColor} font-mono">
-                ${sign}${formatNumber(Math.abs(trValue))}
+                ${pnlStr}
               </td>
               <td class="px-4 py-4.5 text-center">
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${tr.rating === '🟢好交易' ? 'bg-green-950/40 text-profit' : 'bg-red-950/40 text-loss'}">
-                  ${tr.rating}
-                </span>
-                <span class="block text-[9.5px] text-gray-500 font-light mt-0.5">${tr.mentalState}</span>
+                ${ratingBadge}
               </td>
-              <td class="px-4 py-4.5 text-center" onclick="event.stopPropagation()">
-                <button onclick="deleteTrade('${tr.id}')" class="px-2 py-1 text-loss hover:bg-loss/10 rounded text-xs select-none cursor-pointer transition-all">刪除</button>
+              <td class="px-4 py-4.5 text-center select-none" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-center gap-1.5">
+                  ${actionButtons}
+                  <button onclick="deleteTrade('${tr.id}')" class="px-1.5 py-1 text-loss hover:text-white hover:bg-loss/20 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="刪除交易">
+                    <span>🗑️</span>
+                  </button>
+                </div>
               </td>
             `;
             body.appendChild(trRow);
@@ -2014,28 +2211,64 @@
             // Accordion detail view container 
             const trDetail = document.createElement('tr');
             trDetail.id = `row-detail-${tr.id}`;
-            trDetail.className = "hidden bg-terminal-bg/85 font-normal select-text cursor-default";
-            trDetail.innerHTML = `
-              <td colspan="10" class="p-5 border-l-2 border-terminal-accent">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-300">
-                  <div class="space-y-2">
-                    <div class="text-gray-500 font-medium">進出場分析</div>
-                    <div><span class="text-gray-500">進場依據:</span> <span class="bg-terminal-card px-2 py-1.5 rounded inline-block mt-1 border border-terminal-accent/40 font-mono text-white text-[11px]">${tr.entryReason}</span></div>
-                    <div><span class="text-gray-500">出場依據:</span> <span class="bg-terminal-card px-2 py-1.5 rounded inline-block mt-1 border border-terminal-accent/40 font-mono text-white text-[11px]">${tr.exitReason}</span></div>
+            trDetail.className = "hidden bg-[#0d131f]/95 font-normal select-text cursor-default";
+
+            const detailExitReasonStr = isClosed 
+              ? tr.exitReason 
+              : `<span class="text-warning italic font-semibold">🔍 持倉狀態：點看操作列的「⚡平倉」按鈕進入表單，輸入賣出價格即可由系統為您自動分析盈虧、覆盤好壞！</span>`;
+
+            const detailPnLCardStr = isClosed 
+              ? `
+                  <div class="flex justify-between">
+                    <span class="text-gray-500 select-none">毛損利額:</span>
+                    <span class="font-bold text-white">$${formatNumber(tr.grossPnL)}</span>
                   </div>
-                  <div class="space-y-2">
-                    <div class="text-gray-500 font-medium font-mono">成本細節 (Point size: ${tr.pointValue})</div>
-                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div>毛損利額: $${formatNumber(tr.grossPnL)}</div>
-                      <div>估手續費: $${formatNumber(tr.fee)}</div>
-                      <div class="col-span-2 text-warning">對比資金成數: ${(tr.entryPrice * tr.qty * tr.pointValue / state.settings.initialCapital * 100).toFixed(1)}%</div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-500 select-none">估手續費:</span>
+                    <span class="font-bold text-white">$${formatNumber(tr.fee)}</span>
+                  </div>
+                `
+              : `
+                  <div class="text-center py-2 text-warning font-sans animate-pulse text-[11px] font-semibold border-b border-warning/10 mb-2">
+                    ⏳ 部位尚未平倉，未實現盈虧中
+                  </div>
+                `;
+
+            trDetail.innerHTML = `
+              <td colspan="10" class="p-5 border-l-2 border-terminal-accent whitespace-normal break-words">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-300 whitespace-normal break-words">
+                  <div class="space-y-3 whitespace-normal break-words min-w-0">
+                    <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] select-none">進出場分析</div>
+                    <div class="space-y-2.5 whitespace-normal break-words">
+                      <div class="whitespace-normal break-words">
+                        <span class="text-gray-500 font-medium block mb-1 select-none">進場依據:</span>
+                        <div class="bg-terminal-bg/60 px-3 py-2 rounded-lg border border-terminal-accent/40 font-mono text-white text-[11px] leading-relaxed whitespace-normal break-words overflow-hidden">
+                          ${tr.entryReason}
+                        </div>
+                      </div>
+                      <div class="whitespace-normal break-words">
+                        <span class="text-gray-500 font-medium block mb-1 select-none">出場依據:</span>
+                        <div class="bg-terminal-bg/60 px-3 py-2 rounded-lg border border-terminal-accent/40 font-mono text-white text-[11px] leading-relaxed whitespace-normal break-words overflow-hidden">
+                          ${detailExitReasonStr}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div class="space-y-2 md:col-span-1">
-                    <div class="text-gray-500 font-medium">思維思緒與覆盤檢討</div>
-                    <p class="leading-relaxed text-gray-300 bg-terminal-card p-3 rounded-lg border border-terminal-accent/50 italic select-text">
+                  <div class="space-y-3 min-w-0">
+                    <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] select-none font-mono">成本細節 (Point size: ${tr.pointValue})</div>
+                    <div class="bg-terminal-bg/60 p-3.5 rounded-lg border border-terminal-accent/40 space-y-2.5 font-mono text-[11px]">
+                      ${detailPnLCardStr}
+                      <div class="flex justify-between border-t border-terminal-accent/20 pt-2 text-warning">
+                        <span class="select-none">對比資金成數:</span>
+                        <span class="font-bold">${(tr.entryPrice * tr.qty * tr.pointValue / state.settings.initialCapital * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="space-y-3 min-w-0 whitespace-normal break-words">
+                    <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] select-none">思維思緒與覆盤檢討</div>
+                    <div class="leading-relaxed text-gray-300 bg-terminal-bg/60 p-3.5 rounded-lg border border-terminal-accent/40 italic select-text text-[11px] min-h-[100px] whitespace-normal break-words overflow-hidden">
                       ${tr.note || '無填寫覆盤備註。對情緒如實記錄，是擊敗不理性的最重要關鍵！'}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </td>
@@ -2219,6 +2452,111 @@
           recalculateCoreStats();
           renderLog();
         }
+      }
+
+      function editTrade(id) {
+        const tr = state.trades.find(t => t.id === id);
+        if (!tr) {
+          alert("找不到該筆交易記錄！");
+          return;
+        }
+
+        state.editingTradeId = id;
+
+        // Switch tab to form
+        switchTab('new-trade');
+
+        // Populate values
+        document.getElementById('trade-code').value = tr.code || '';
+        document.getElementById('trade-name').value = tr.name || '';
+
+        // Product type (radio button)
+        const typeRadios = document.getElementsByName('trade-type');
+        for (let r of typeRadios) {
+          if (r.value === tr.type) {
+            r.checked = true;
+          }
+        }
+
+        document.getElementById('trade-qty').value = tr.qty || 1;
+        setPointValue(tr.pointValue || 2000);
+        document.getElementById('trade-fee').value = tr.fee || 0;
+        
+        setPositionAttr(tr.position || '底倉');
+
+        document.getElementById('trade-entry-date').value = tr.entryDate || getTodayDateString();
+        document.getElementById('trade-entry-price').value = tr.entryPrice || 0;
+        document.getElementById('trade-entry-reason').value = tr.entryReason || '';
+
+        document.getElementById('trade-exit-date').value = tr.exitDate || getTodayDateString();
+        document.getElementById('trade-exit-price').value = tr.exitPrice || 0;
+        document.getElementById('trade-exit-reason').value = tr.exitReason || '';
+
+        document.getElementById('trade-mental-state').value = tr.mentalState || '冷靜執行';
+        
+        setRating(tr.rating || '🟢好交易');
+        
+        document.getElementById('trade-note').value = tr.note || '';
+
+        setTradeStatus(tr.isClosed !== false);
+
+        updateFormCalculations();
+
+        // Update form title and text to reflect Edit state
+        const titleH2 = document.getElementById('form-title-h2');
+        if (titleH2) {
+          titleH2.innerHTML = '<span>✏️</span> 編輯覆盤交易資訊';
+        }
+        const subtext = document.getElementById('form-title-subtext');
+        if (subtext) {
+          subtext.innerText = '您正在修改既有的交易歷史紀錄，儲存後相關統計數據與資產曲線將會重新計算。';
+        }
+        const submitBtn = document.getElementById('new-trade-submit-btn');
+        if (submitBtn) {
+          submitBtn.innerHTML = '💾 儲存修改內容';
+        }
+      }
+
+      function closeTradeDirect(id) {
+        const tr = state.trades.find(t => t.id === id);
+        if (!tr) {
+          alert("找不到該筆交易記錄！");
+          return;
+        }
+
+        editTrade(id);
+
+        // Force closed status to reveal exit fields
+        setTradeStatus(true);
+
+        // If exitDate wasn't filled (or is empty), default to today
+        const exitDateInput = document.getElementById('trade-exit-date');
+        if (!exitDateInput.value) {
+          exitDateInput.value = getTodayDateString();
+        }
+
+        // Custom Title and Button styles for flattening flow
+        const titleH2 = document.getElementById('form-title-h2');
+        if (titleH2) {
+          titleH2.innerHTML = '<span>⚡</span> 執行完結平倉覆盤';
+        }
+        const subtext = document.getElementById('form-title-subtext');
+        if (subtext) {
+          subtext.innerText = `正在為「${tr.code} ${tr.name}」執行出場平倉。請輸入賣出均價、出場日期，並進行心態與好壞覆盤。`;
+        }
+        const submitBtn = document.getElementById('new-trade-submit-btn');
+        if (submitBtn) {
+          submitBtn.innerHTML = '⚡ 儲存平倉，分析此筆交易';
+        }
+
+        // Focus exit price instantly for direct input
+        setTimeout(() => {
+          const exitPriceInput = document.getElementById('trade-exit-price');
+          if (exitPriceInput) {
+            exitPriceInput.focus();
+            exitPriceInput.select();
+          }
+        }, 100);
       }
 
       // ==========================================
@@ -2509,16 +2847,39 @@
         switchTab('dashboard');
       }
 
+      function clearTradesOnly() {
+        const doubleCheck = confirm("⚠️ 確定要【清空所有覆盤交易明細】嗎？\n\n這項動作將會把所有歷史紀錄清除歸零，但您的「個人初始帳戶資金等參數設定」仍會被原地保留。讓您直接手動輸入目前的實際持倉！");
+        if (doubleCheck) {
+          state.trades = [];
+          localStorage.setItem('momentum_trades', JSON.stringify([]));
+          recalculateCoreStats();
+          switchTab(state.currentTab); // Re-render whichever tab is active
+          alert("🧹 本機覆盤交易歷史已完全清空為 0 筆！現在您可以開始建立您的第一筆實盤或模擬覆盤。");
+        }
+      }
+
+      function restoreDemoTrades() {
+        const confirmRestore = confirm("🔄 您是否要重新載入【系統預設示範覆盤交易紀錄】？\n\n此操作將以系統之示範交易(大聯大期、國巨等)覆蓋您目前的交易。");
+        if (confirmRestore) {
+          state.trades = [ ...SEED_TRADES ];
+          localStorage.setItem('momentum_trades', JSON.stringify(state.trades));
+          recalculateCoreStats();
+          switchTab(state.currentTab); // Re-render whichever tab is active
+          alert("🔄 已成功還原預設示範交易紀錄！希望能幫助您順利觀摩期望值及走勢圖功能運作。");
+        }
+      }
+
       function wipeAllData() {
-        const first = confirm("⚠️ 確定要刪除所有本機交易明細與自訂參數設定嗎？這項動作將清除本機的所有記錄！");
+        const first = confirm("⚠️ 確定要刪除所有覆盤交易與個人參數設定（回到出廠空狀態）嗎？\n\n這將完全清除您的瀏覽器本機快取！");
         if (first) {
-          const second = confirm("💥 請再次確認！這對你的覆盤是一次重大轉折。確定完全重整 (重設為展示資料) 嗎？");
+          const second = confirm("💥 請再次確認！這將清空所有的資料，這能讓您的系統變成最乾淨的空白平台。確定執行嗎？");
           if (second) {
             localStorage.clear();
+            localStorage.setItem('momentum_trades', JSON.stringify([])); // Preserve clean empty trades
             loadDataFromStorage();
             recalculateCoreStats();
             renderDashboard();
-            alert("💥 資料已完全清空，並回復為展示範例交易明細。你可以依循動能框架重新出發！");
+            alert("💥 系統已徹底初始化！當前為 100% 乾淨空白狀態，所有參數已回復預設。您可以重新開始！");
             switchTab('dashboard');
           }
         }
