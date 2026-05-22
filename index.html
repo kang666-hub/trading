@@ -1,0 +1,2001 @@
+<!doctype html>
+<html lang="zh-TW" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>個股期貨動能交易日誌</title>
+    <!-- Tailwind CSS v4 Browser CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+      
+      @theme {
+        --color-terminal-bg: #121824;      /* Slightly lighter obsidian dark background */
+        --color-terminal-card: #1b2234;    /* High contrast slate-blue container card */
+        --color-terminal-accent: #314158;  /* Vibrant high contrast steel blue border */
+        --color-profit: #2ebd6f;           /* Enhanced emerald green */
+        --color-loss: #f25f5f;             /* Vibrant rose red */
+        --color-warning: #f59e0b;          /* Bright expectations orange */
+        --font-mono: 'JetBrains Mono', monospace;
+      }
+
+      /* Force standard reset background and text color to ensure 100% stable rendering */
+      body {
+        background-color: #121824 !important;
+        color: #f8fafc !important;
+      }
+      .bg-terminal-bg {
+        background-color: #121824 !important;
+      }
+      .bg-terminal-card {
+        background-color: #1b2234 !important;
+      }
+      .border-terminal-accent {
+        border-color: #314158 !important;
+      }
+
+      /* High-contrast text clarity override for dark background */
+      .text-gray-100 { color: #f8fafc !important; }
+      .text-gray-200 { color: #f1f5f9 !important; }
+      .text-gray-300 { color: #e2e8f0 !important; }
+      .text-gray-400 { color: #cbd5e1 !important; } /* Make dim text much brighter, highly readable */
+      .text-gray-500 { color: #94a3b8 !important; } /* Make descriptions comfortably clear */
+      .text-white { color: #ffffff !important; }
+      
+      /* Make sure sidebar hover items are clear */
+      .hover\:text-white:hover { color: #ffffff !important; }
+
+      /* Custom scrollbars and transition effects */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #121824;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #314158;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #2ebd6f;
+      }
+
+      .chart-container canvas {
+        max-height: 100% !important;
+        max-width: 100% !important;
+      }
+
+      /* Ultra-prominent Input & Selector Custom Styling Override */
+      input[type="text"],
+      input[type="number"],
+      input[type="date"],
+      select,
+      textarea {
+        background-color: #0b1019 !important; /* Slightly lighter inner input bg */
+        border: 2px solid #4a5d78 !important; /* Saturated, visible border */
+        color: #ffffff !important; /* Crisp white text value */
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500 !important;
+        transition: all 0.15s ease-in-out !important;
+        border-radius: 8px !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      /* Hover highlight */
+      input[type="text"]:hover,
+      input[type="number"]:hover,
+      input[type="date"]:hover,
+      select:hover,
+      textarea:hover {
+        border-color: #5c7294 !important; /* Brighter steel-blue hover */
+        background-color: #0e1422 !important;
+      }
+
+      /* Focused Glowing States */
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      input[type="date"]:focus,
+      select:focus,
+      textarea:focus {
+        border-color: #3b82f6 !important; /* Rich focus blue */
+        background-color: #131d31 !important; /* Focus slate */
+        outline: none !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+      }
+
+      /* Saturated Placeholder text */
+      ::placeholder {
+        color: #8fa0ba !important;
+        opacity: 0.95 !important;
+      }
+
+      /* Input label high contrast tuning */
+      label.block {
+        color: #ffffff !important; /* Solid bright white labels */
+        font-weight: 700 !important; /* Prominent readability */
+        letter-spacing: 0.05em !important;
+        font-size: 11.5px !important;
+        margin-bottom: 6px !important;
+      }
+
+      /* Active Toggles & Option Segment Buttons */
+      .bg-terminal-accent.text-white {
+        background-color: #3b82f6 !important; /* Saturated blue */
+        color: #ffffff !important;
+        border: 1px solid rgba(147, 197, 253, 0.4) !important;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.3) !important;
+      }
+
+      /* Standalone Custom Sidebar highlight configuration to keep green bar */
+      aside [data-tab-btn].bg-terminal-accent.text-white {
+        background-color: #232d3f !important; /* Visible container background */
+        border-color: #2ebd6f !important; /* Enhanced emerald left border */
+        border-left-width: 4px !important;
+        box-shadow: none !important;
+      }
+    </style>
+  </head>
+  <body class="bg-terminal-bg text-gray-100 font-sans h-full flex flex-col md:flex-row overflow-hidden select-none">
+
+    <!-- Sidebar Navigation (Desktop) -->
+    <aside class="hidden md:flex w-64 bg-terminal-card border-r border-terminal-accent flex-col justify-between shrink-0">
+      <div class="p-6">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 bg-terminal-accent rounded-lg flex items-center justify-center">
+            <span class="text-xl font-bold text-profit">M</span>
+          </div>
+          <div>
+            <h1 class="text-md font-bold tracking-tight uppercase leading-none">Momentum</h1>
+            <span class="text-[10px] text-gray-500 font-mono tracking-widest">TRADING JOURNAL</span>
+          </div>
+        </div>
+        <nav class="space-y-1">
+          <button onclick="switchTab('dashboard')" data-tab-btn="dashboard" class="w-full flex items-center gap-3 px-4 py-3 bg-terminal-accent text-white rounded-lg transition-all text-left font-medium">
+            <span class="text-lg">📊</span> 儀表板
+          </button>
+          <button onclick="switchTab('new-trade')" data-tab-btn="new-trade" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#1a202c] hover:text-white rounded-lg transition-all text-left font-medium">
+            <span class="text-lg">➕</span> 新增交易
+          </button>
+          <button onclick="switchTab('log')" data-tab-btn="log" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#1a202c] hover:text-white rounded-lg transition-all text-left font-medium">
+            <span class="text-lg">📋</span> 交易記錄
+          </button>
+          <button onclick="switchTab('curve')" data-tab-btn="curve" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#1a202c] hover:text-white rounded-lg transition-all text-left font-medium">
+            <span class="text-lg">📈</span> 資產曲線
+          </button>
+          <button onclick="switchTab('settings')" data-tab-btn="settings" class="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#1a202c] hover:text-white rounded-lg transition-all text-left font-medium">
+            <span class="text-lg">⚙️</span> 設定
+          </button>
+        </nav>
+      </div>
+      <div class="p-6 border-t border-terminal-accent">
+        <div class="text-xs text-gray-500 uppercase tracking-widest mb-1 font-mono">交易心法</div>
+        <div class="text-sm italic text-gray-300 font-medium">動能框架 × 阿魯米期望值</div>
+      </div>
+    </aside>
+
+    <!-- Header for Mobile only -->
+    <header class="md:hidden flex items-center justify-between px-5 py-4 bg-terminal-card border-b border-terminal-accent sticky top-0 z-50 shrink-0">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-terminal-accent rounded-lg flex items-center justify-center">
+          <span class="text-lg font-bold text-profit">M</span>
+        </div>
+        <h1 id="mobile-title" class="text-sm font-bold tracking-tight">個股期貨動能交易日誌</h1>
+      </div>
+      <div class="text-xs text-gray-400 font-mono" id="mobile-clock">00:00:00</div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative overflow-hidden min-h-0 bg-terminal-bg">
+      
+      <!-- Statistics summary banner (Header dashboard widgets) -->
+      <section class="p-4 md:p-6 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 shrink-0 bg-terminal-bg/85 backdrop-blur border-b border-terminal-accent/30 z-10">
+        <div class="bg-terminal-card p-3 md:p-4 rounded-xl border border-terminal-accent flex flex-col justify-between">
+          <span class="text-xs text-gray-400">帳戶淨值 (Equity)</span>
+          <div class="text-xl md:text-2xl font-bold font-mono tracking-tight text-white transition-all ease-out duration-500" id="stat-equity">$0</div>
+          <span class="text-[10px] text-profit font-semibold flex items-center gap-1 mt-1" id="stat-equity-change">▲ +0.0%</span>
+        </div>
+        <div class="bg-terminal-card p-3 md:p-4 rounded-xl border border-terminal-accent flex flex-col justify-between">
+          <span class="text-xs text-gray-400">本期損益 (Net P&L)</span>
+          <div class="text-xl md:text-2xl font-bold font-mono tracking-tight transition-colors duration-300" id="stat-pnl">$0</div>
+          <span class="text-[10px] text-gray-500 font-mono mt-1" id="stat-trade-count">累積成交: 0 筆</span>
+        </div>
+        <div class="bg-terminal-card p-3 md:p-4 rounded-xl border border-terminal-accent flex flex-col justify-between">
+          <span class="text-xs text-gray-400">勝率 (Win Rate)</span>
+          <div class="text-xl md:text-2xl font-bold font-mono tracking-tight text-white mb-1" id="stat-winrate">0.0%</div>
+          <div class="h-1.5 w-full bg-terminal-bg rounded-full overflow-hidden">
+            <div id="stat-winrate-bar" class="h-full bg-profit rounded-full transition-all duration-700" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="bg-terminal-card p-3 md:p-4 rounded-xl border border-terminal-accent flex flex-col justify-between">
+          <span class="text-xs text-gray-400">期望值 (Expected E)</span>
+          <div class="text-xl md:text-2xl font-bold font-mono tracking-tight text-warning" id="stat-expected-value">0.00</div>
+          <span class="text-[10px] text-gray-500 font-mono flex items-center gap-1 mt-1" id="stat-profit-factor">盈虧比: 0.00</span>
+        </div>
+      </section>
+
+      <!-- Page Containers -->
+      <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 relative">
+
+        <!-- TAB 1: 📊 儀表板 -->
+        <div id="tab-dashboard" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Asset Chart Mini -->
+            <div class="bg-terminal-card rounded-xl border border-terminal-accent p-5 flex flex-col h-72 md:h-80 shadow-md">
+              <div class="flex justify-between items-center mb-4 shrink-0">
+                <h3 class="font-bold flex items-center gap-2">
+                  <span class="w-1.5 h-4 bg-profit rounded-sm"></span>
+                  資產走勢回顧 (迷你圖)
+                </h3>
+                <span class="text-[10px] bg-terminal-accent px-2 py-0.5 rounded text-gray-400 font-mono cursor-pointer hover:text-white transition-colors" onclick="switchTab('curve')">查看大圖 →</span>
+              </div>
+              <div class="flex-1 relative min-h-0">
+                <canvas id="mini-equity-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Recent Trades List -->
+            <div class="bg-terminal-card rounded-xl border border-terminal-accent flex flex-col overflow-hidden shadow-md">
+              <div class="p-4 bg-terminal-accent/20 border-b border-terminal-accent flex justify-between items-center">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                  <span>📋</span> 最近 5 筆交易覆盤
+                </h3>
+                <span class="text-xs text-blue-400 cursor-pointer hover:underline font-medium" onclick="switchTab('log')">查看完整記錄 →</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                  <thead class="text-xs text-gray-400 uppercase bg-terminal-bg/50">
+                    <tr>
+                      <th class="px-4 py-3 font-medium">進場日期</th>
+                      <th class="px-4 py-3 font-medium">商品名稱</th>
+                      <th class="px-4 py-3 font-medium">部位屬性</th>
+                      <th class="px-4 py-3 font-medium">進 / 出價</th>
+                      <th class="px-4 py-3 font-medium">淨損益</th>
+                      <th class="px-4 py-3 font-medium text-center">評等</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-trades-body" class="divide-y divide-terminal-accent/30 font-medium">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Framework Info and Quick Navigation -->
+          <div class="space-y-6">
+            <div class="bg-terminal-card rounded-xl border border-terminal-accent p-5 flex flex-col shadow-md">
+              <h3 class="font-bold mb-4 flex items-center gap-2 text-white">
+                <span>🎯</span> 框架執行狀況
+              </h3>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between bg-terminal-bg/40 p-3 rounded-lg border border-terminal-accent/20">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">🟢</span>
+                    <span class="text-sm text-gray-300 font-medium">好交易 (符合框架)</span>
+                  </div>
+                  <span class="font-mono font-bold text-profit text-lg" id="dashboard-good-count">0</span>
+                </div>
+                <div class="flex items-center justify-between bg-terminal-bg/40 p-3 rounded-lg border border-terminal-accent/20">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">🔴</span>
+                    <span class="text-sm text-gray-300 font-medium">壞交易 (違反框架)</span>
+                  </div>
+                  <span class="font-mono font-bold text-loss text-lg" id="dashboard-bad-count">0</span>
+                </div>
+                
+                <div class="h-px bg-terminal-accent/40 my-2"></div>
+                
+                <div class="p-3.5 bg-red-950/20 border border-loss/30 rounded-lg" id="pnl-encouragement-banner">
+                  <p class="text-[11px] text-loss leading-relaxed italic" id="pnl-summary-quote">
+                    ⚠️ 壞交易不代表失敗，記錄它是為了讓下一次更好。
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6">
+                <button onclick="switchTab('new-trade')" class="w-full py-3 bg-profit hover:bg-profit/90 active:scale-[0.98] rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white cursor-pointer select-none text-sm">
+                  <span>🚀</span> 快速新增交易
+                </button>
+              </div>
+            </div>
+
+            <!-- Heart of Alumi card -->
+            <div class="bg-terminal-card rounded-xl border border-terminal-accent p-5 shadow-md">
+              <h4 class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2">阿魯米期望值心法</h4>
+              <p class="text-xs leading-relaxed text-gray-400">
+                「只要期望值是正的，剩下的就是大數法则與紀律。不要為一次虧損而悲傷，不要為一次暴利而狂妄。保持冷靜，重複執行符合動能框架的『好交易』。」
+              </p>
+              <div class="mt-3 flex items-center justify-between text-[10px] text-profit font-mono">
+                <span>Win Ratio * Gain + Lose Ratio * Loss = Equity Growth</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: ➕ 新增交易 -->
+        <div id="tab-new-trade" class="tab-content hidden max-w-4xl mx-auto">
+          <!-- Main Form Card -->
+          <div class="bg-terminal-card rounded-xl border border-terminal-accent shadow-lg overflow-hidden">
+            <div class="p-5 border-b border-terminal-accent bg-terminal-accent/10 flex justify-between items-center">
+              <div>
+                <h2 class="text-lg font-bold flex items-center gap-2 text-white">
+                  <span>➕</span> 覆盤新交易
+                </h2>
+                <span class="text-xs text-gray-400">請如實填寫當下動能框架與身心狀態，唯有誠實才能看清真相。</span>
+              </div>
+              <span class="text-xs bg-terminal-accent px-2 py-1 rounded text-gray-400 font-mono">快捷鍵：Ctrl+Enter 儲存</span>
+            </div>
+
+            <!-- Form Body -->
+            <form id="new-trade-form" onsubmit="saveTrade(event)" class="p-6 space-y-6">
+              
+              <!-- Subtle red warning banner -->
+              <div id="form-warning-banner" class="hidden p-4 bg-red-950/30 border border-loss/50 rounded-xl transition-all duration-300">
+                <div class="flex items-start gap-2 text-sm text-loss leading-relaxed font-semibold">
+                  <span class="text-base select-none">⚠️</span>
+                  <div>
+                    壞交易不代表失敗，記錄它是為了讓下一次更好。
+                    <span class="block text-xs font-normal text-gray-400 mt-1">此筆交易將被標記為「壞交易（違反框架）」，它將扣減你的整體執行紀律。請確實覆盤記錄。</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- General details grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Code & Name -->
+                <div>
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5">商品代號</label>
+                  <div class="relative">
+                    <input type="text" id="trade-code" placeholder="如: FIJPF" required class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit focus:ring-1 focus:ring-profit rounded-lg px-3 py-2 text-sm font-mono tracking-wider focus:outline-none placeholder-gray-600 text-white uppercase" oninput="predictName(this.value)">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5">中文名稱</label>
+                  <input type="text" id="trade-name" placeholder="如: 大聯大期05" required class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit focus:ring-1 focus:ring-profit rounded-lg px-3 py-2 text-sm focus:outline-none placeholder-gray-600 text-white uppercase">
+                </div>
+
+                <!-- Product type & Qty -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-400 font-medium mb-1.5">商品型態</label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="flex items-center justify-center gap-1.5 p-2 bg-terminal-bg border border-terminal-accent rounded-lg cursor-pointer hover:border-terminal-accent/80 text-xs text-gray-300 hover:text-white transition-all select-none">
+                        <input type="radio" name="trade-type" value="現貨" class="accent-profit" onchange="updateFormCalculations()">
+                        <span>現貨</span>
+                      </label>
+                      <label class="flex items-center justify-center gap-1.5 p-2 bg-terminal-bg border border-terminal-accent rounded-lg cursor-pointer hover:border-terminal-accent/80 text-xs text-gray-300 hover:text-white transition-all select-none">
+                        <input type="radio" name="trade-type" value="個股期貨" checked class="accent-profit" onchange="updateFormCalculations()">
+                        <span>個股期貨</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 font-medium mb-1.5">口/張數</label>
+                    <input type="number" id="trade-qty" min="1" value="1" required class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit focus:ring-1 focus:ring-profit rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-mono" oninput="updateFormCalculations()">
+                  </div>
+                </div>
+
+                <!-- Point Value Toggle & Lot Fee -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-400 font-medium mb-1.5">每點價值</label>
+                    <div class="flex gap-1.5 bg-terminal-bg border border-terminal-accent rounded-lg p-1">
+                      <button type="button" id="pv-std" onclick="setPointValue(2000)" class="flex-1 text-[11px] font-bold py-1 bg-terminal-accent text-white rounded transition-all">2000 標準</button>
+                      <button type="button" id="pv-mini" onclick="setPointValue(100)" class="flex-1 text-[11px] font-medium py-1 text-gray-400 hover:text-white rounded transition-all">100 小型</button>
+                      <input type="hidden" id="trade-point-value" value="2000">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 font-medium mb-1.5">手續費估算 (可修改)</label>
+                    <input type="number" id="trade-fee" min="0" value="100" required class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit focus:ring-1 focus:ring-profit rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-mono" oninput="updateFormCalculations('manual-fee')">
+                  </div>
+                </div>
+
+                <!-- Position Attributes Segmented Buttons -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5">部位屬性</label>
+                  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 bg-terminal-bg p-1.5 border border-terminal-accent rounded-xl">
+                    <button type="button" onclick="setPositionAttr('底倉')" data-pos="底倉" class="pos-btn py-1.5 text-xs font-semibold rounded-lg bg-terminal-accent text-white transition-all">底倉</button>
+                    <button type="button" onclick="setPositionAttr('加碼1')" data-pos="加碼1" class="pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg">加碼1</button>
+                    <button type="button" onclick="setPositionAttr('加碼2')" data-pos="加碼2" class="pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg">加碼2</button>
+                    <button type="button" onclick="setPositionAttr('加碼3')" data-pos="加碼3" class="pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg">加碼3</button>
+                    <button type="button" onclick="setPositionAttr('加碼4')" data-pos="加碼4" class="pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg">加碼4</button>
+                    <button type="button" onclick="setPositionAttr('獨立新倉')" data-pos="獨立新倉" class="pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg">獨立新倉</button>
+                    <input type="hidden" id="trade-position" value="底倉">
+                  </div>
+                </div>
+
+                <!-- Entry details (Date + price) -->
+                <div class="bg-terminal-bg/35 border border-terminal-accent/40 rounded-xl p-4 space-y-3">
+                  <div class="text-xs text-gray-400 font-bold border-b border-terminal-accent/30 pb-1.5">🟢 進場設定</div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">進場日期</label>
+                    <input type="date" id="trade-entry-date" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">進場價格</label>
+                    <input type="number" step="any" id="trade-entry-price" placeholder="0.0" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">進場依據</label>
+                    <select id="trade-entry-reason" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-medium">
+                      <option value="[A-1] 箱體突破 / 創歷史新高">[A-1] 箱體突破 / 創歷史新高</option>
+                      <option value="[A-2] 大單打路後回測量能真空區">[A-2] 大單打路後回測量能真空區</option>
+                      <option value="[A-3] KAMA系統異常量能發動">[A-3] KAMA系統異常量能發動</option>
+                      <option value="[A-4] 酒精衝動 / 怕買不到追高（檢討用）">[A-4] 酒精衝動 / 怕買不到追高（檢討用）</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Exit details (Date + price) -->
+                <div class="bg-terminal-bg/35 border border-terminal-accent/40 rounded-xl p-4 space-y-3">
+                  <div class="text-xs text-gray-400 font-bold border-b border-terminal-accent/30 pb-1.5">🔴 出場設定</div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">出場日期</label>
+                    <input type="date" id="trade-exit-date" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">出場價格</label>
+                    <input type="number" step="any" id="trade-exit-price" placeholder="0.0" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-gray-400 mb-1">出場依據</label>
+                    <select id="trade-exit-reason" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none font-medium">
+                      <option value="[B-1] 觸及 2% 獨立新倉死停損">[B-1] 觸及 2% 獨立新倉死停損</option>
+                      <option value="[B-2] 跌破 5日線 / 10日線 紀律減碼">[B-2] 跌破 5日線 / 10日線 紀律減碼</option>
+                      <option value="[B-3] 開盤開B（異常開高走低）果斷抹除風險">[B-3] 開盤開B（異常開高走低）果斷抹除風險</option>
+                      <option value="[B-4] 達標分批停利">[B-4] 達標分批停利</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Mind state -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5">身心狀態</label>
+                  <select id="trade-mental-state" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
+                    <option value="冷靜執行">冷靜執行 (理性心流中)</option>
+                    <option value="沒睡飽">沒睡飽 (精神稍微恍惚)</option>
+                    <option value="情緒波動">情緒波動 (急著扳回損失或亢奮)</option>
+                    <option value="不理性衝動">不理性衝動 (受市場情緒感染)</option>
+                    <option value="壓力過大">壓力過大 (部位過大產生畏懼)</option>
+                  </select>
+                </div>
+
+                <!-- Prominent Quality Rating Toggle -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-400 font-bold mb-2">框架執行評等 (核心紀律)</label>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button type="button" id="btn-rating-good" onclick="setRating('🟢好交易')" class="flex items-center justify-center gap-3 py-4 bg-profit border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-profit/50 text-sm">
+                      <span class="text-2xl">🟢</span>
+                      <div class="text-left leading-tight">
+                        <div class="text-md font-bold">好交易</div>
+                        <div class="text-[10px] font-normal text-white/80">符合框架，即使虧損也是對的</div>
+                      </div>
+                    </button>
+                    <button type="button" id="btn-rating-bad" onclick="setRating('🔴壞交易')" class="flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm">
+                      <span class="text-2xl">🔴</span>
+                      <div class="text-left leading-tight">
+                        <div class="text-md font-bold">壞交易</div>
+                        <div class="text-[10px] font-normal text-gray-500">違反框架，即使獲利也是錯的</div>
+                      </div>
+                    </button>
+                    <input type="hidden" id="trade-rating" value="🟢好交易">
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-400 font-medium mb-1.5">覆盤備註與思維檢討</label>
+                  <textarea id="trade-note" rows="3" placeholder="請抒寫交易時的情緒、支撐壓力位置、量能變化或任何能讓你精進的檢討點..." class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-3 py-2 text-sm text-white focus:outline-none placeholder-gray-600 leading-relaxed"></textarea>
+                </div>
+
+              </div>
+
+              <!-- Real-time calculation feedback display -->
+              <div class="bg-terminal-bg border-2 border-terminal-accent rounded-xl p-5 shadow-inner">
+                <div class="text-xs text-gray-500 uppercase font-bold mb-3 tracking-widest font-mono">Real-time Calculations / 即時運算結果</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-terminal-accent/40 font-mono">
+                  
+                  <div class="flex flex-col justify-center pt-2 md:pt-0 pl-1 md:pl-0">
+                    <span class="text-[10px] text-gray-400 mb-0.5">毛損益 (Gross PnL)</span>
+                    <span id="calc-gross" class="text-base font-bold text-gray-300">$0</span>
+                  </div>
+                  
+                  <div class="flex flex-col justify-center pt-2 md:pt-0 pl-4">
+                    <span class="text-[10px] text-gray-400 mb-0.5">手續費抵減 (Fee)</span>
+                    <span id="calc-fee" class="text-base font-bold text-gray-300">$0</span>
+                  </div>
+                  
+                  <div class="flex flex-col justify-center pt-2 md:pt-0 pl-4">
+                    <span class="text-[10px] text-gray-400 mb-0.5">淨損益 (Net PnL)</span>
+                    <div class="flex items-center gap-1">
+                      <span id="calc-net" class="text-base font-bold transition-all text-gray-200">$0</span>
+                      <span id="calc-target-icon" class="text-sm select-none"></span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex flex-col justify-center pt-2 md:pt-0 pl-4">
+                    <span class="text-[10px] text-gray-400 mb-0.5">淨投資報酬率 %</span>
+                    <span id="calc-pnl-pct" class="text-base font-bold text-gray-200">0.00%</span>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Button actions -->
+              <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-terminal-accent/40 col-span-2">
+                <button type="button" onclick="clearTradeForm()" class="px-5 py-2.5 border border-terminal-accent hover:bg-[#1C2330] rounded-lg text-xs font-semibold cursor-pointer select-none text-gray-400 hover:text-white transition-all">
+                  清除欄位
+                </button>
+                <button type="submit" class="px-8 py-2.5 bg-profit hover:bg-profit/90 active:scale-[0.98] rounded-lg text-xs font-bold text-white transition-all shadow-md cursor-pointer select-none flex items-center justify-center gap-1.5">
+                  📁 儲存交易記錄
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+
+        <!-- TAB 3: 📋 交易記錄 -->
+        <div id="tab-log" class="tab-content hidden space-y-6">
+          <!-- Control Panel -->
+          <div class="bg-terminal-card border border-terminal-accent rounded-xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+            
+            <!-- Filter buttons -->
+            <div class="flex flex-wrap gap-2" id="log-filter-buttons">
+              <button onclick="setLogFilter('全部')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all">全部</button>
+              <button onclick="setLogFilter('🟢好交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🟢 好交易</button>
+              <button onclick="setLogFilter('🔴壞交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🔴 壞交易</button>
+              <button onclick="setLogFilter('獲利')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">獲利</button>
+              <button onclick="setLogFilter('虧損')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">虧損</button>
+            </div>
+
+            <!-- Search and Sort and Actions -->
+            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
+              <!-- Search -->
+              <div class="relative flex-1 sm:w-48">
+                <span class="absolute left-3 top-2.5 text-xs select-none text-gray-500">🔍</span>
+                <input type="text" id="log-search-input" oninput="triggerLogSearch(this.value)" placeholder="搜尋代號/名稱..." class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none placeholder-gray-600">
+              </div>
+
+              <!-- Sorting dropdown -->
+              <select id="log-sort-select" onchange="triggerLogSort(this.value)" class="bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none">
+                <option value="date-desc">日期最新優先</option>
+                <option value="date-asc">日期最早優先</option>
+                <option value="pnl-desc">獲利大小優先</option>
+                <option value="pnl-asc">虧損大小優先</option>
+              </select>
+
+              <!-- CSV Export Action -->
+              <button onclick="exportTradesToCSV()" class="px-3.5 py-1.5 bg-terminal-accent hover:bg-terminal-accent/80 text-white border border-terminal-accent/60 rounded-lg text-xs font-semibold select-none flex items-center justify-center gap-1.5 cursor-pointer hover:border-profit transition-all">
+                📤 匯出 CSV
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Trade table card -->
+          <div class="bg-terminal-card border border-terminal-accent rounded-xl shadow-lg overflow-hidden">
+            <div class="overflow-x-auto min-h-64">
+              <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="text-xs text-gray-400 uppercase bg-terminal-bg/50 border-b border-terminal-accent/30 font-mono">
+                  <tr>
+                    <th class="w-6 px-4 py-3"></th>
+                    <th class="px-4 py-3 font-semibold">日期</th>
+                    <th class="px-4 py-3 font-semibold">商品資訊</th>
+                    <th class="px-4 py-3 font-semibold">型態/口數</th>
+                    <th class="px-4 py-3 font-semibold">屬性</th>
+                    <th class="px-4 py-3 font-semibold text-right">進場價</th>
+                    <th class="px-4 py-3 font-semibold text-right">出場價</th>
+                    <th class="px-4 py-3 font-semibold text-right">淨損益 (NTD)</th>
+                    <th class="px-4 py-3 font-semibold text-center">評等/狀態</th>
+                    <th class="px-4 py-3 w-12 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="log-trades-body" class="divide-y divide-terminal-accent/30 font-medium">
+                  <!-- Dynamic generated list -->
+                </tbody>
+              </table>
+
+              <!-- Empty state view -->
+              <div id="log-empty-state" class="hidden flex flex-col items-center justify-center py-16 px-4 max-w-sm mx-auto text-center">
+                <div class="text-4xl mb-4 select-none">🍂</div>
+                <h4 class="text-base font-bold text-gray-300">無符合條件的記錄</h4>
+                <p class="text-xs text-gray-500 mt-2 leading-relaxed" id="empty-motivational-text">
+                  還沒有交易記錄。點擊「新增交易」開始你的第一筆覆盤。
+                </p>
+                <button onclick="switchTab('new-trade')" class="mt-4 px-4 py-2 bg-profit text-white hover:bg-profit/90 text-xs font-bold rounded-lg transition-all shadow-md">
+                  立即新增交易覆盤
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: 📈 資產曲線 -->
+        <div id="tab-curve" class="tab-content hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left large Chart representation card -->
+            <div class="lg:col-span-2 bg-terminal-card border border-terminal-accent rounded-xl p-5 flex flex-col h-96 shadow-lg">
+              <div class="flex justify-between items-center mb-4 shrink-0">
+                <h3 class="font-bold flex items-center gap-2">
+                  <span class="w-1.5 h-4 bg-profit rounded-sm"></span>
+                  資產走勢曲線 (詳細圖)
+                </h3>
+                <div class="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Cumulative Account Equity Growth</div>
+              </div>
+              <div class="flex-1 relative min-h-0">
+                <canvas id="large-equity-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Stats breakdown summary panel -->
+            <div class="bg-terminal-card border border-terminal-accent rounded-xl p-5 flex flex-col justify-between shadow-lg">
+              <div class="space-y-4">
+                <h3 class="font-bold flex items-center gap-2 text-white border-b border-terminal-accent pb-2">
+                  <span>📊</span> 凱利與阿魯米期望值指標
+                </h3>
+                
+                <!-- Win rate and Loss Details -->
+                <div class="grid grid-cols-2 gap-3 pt-1 font-mono">
+                  <div class="bg-terminal-bg/50 p-2.5 rounded-lg border border-terminal-accent/30">
+                    <span class="text-[10px] text-gray-500 block mb-0.5">平均獲利 (Avg Profit)</span>
+                    <span id="curve-avg-win" class="text-sm font-bold text-profit">$0</span>
+                  </div>
+                  <div class="bg-terminal-bg/50 p-2.5 rounded-lg border border-terminal-accent/30">
+                    <span class="text-[10px] text-gray-500 block mb-0.5">平均虧損 (Avg Loss)</span>
+                    <span id="curve-avg-loss" class="text-sm font-bold text-loss">$0</span>
+                  </div>
+                </div>
+
+                <div class="space-y-3 font-mono">
+                  <div class="flex items-center justify-between text-xs py-1">
+                    <span class="text-gray-400">大數效益 / 獲利因子:</span>
+                    <span id="curve-profit-factor" class="font-bold text-gray-200">0.00</span>
+                  </div>
+                  <div class="flex items-center justify-between text-xs py-1">
+                    <span class="text-gray-400">當前最大回撤 (Max DD):</span>
+                    <span id="curve-max-dd" class="font-bold text-loss">0.00%</span>
+                  </div>
+                  <div class="flex items-center justify-between text-xs py-1">
+                    <span class="text-gray-400">累積總損益 (Net Total):</span>
+                    <span id="curve-total-net" class="font-bold text-gray-200">$0</span>
+                  </div>
+                </div>
+
+                <!-- Explanation formula text -->
+                <div class="p-3 bg-terminal-bg/50 rounded-xl border border-terminal-accent/40 text-xs space-y-1.5 leading-relaxed text-gray-400 mt-2">
+                  <div class="font-bold text-[10px] text-warning uppercase font-mono tracking-wider">期望值 E 演算心法:</div>
+                  <p class="text-[11px]" id="curve-formula-desc">
+                    E = 勝率 × 平均獲利 + (1 - 勝率) × 平均虧損
+                  </p>
+                  <p class="text-[10px] text-gray-500 font-normal leading-normal">
+                    * 其中勝率與盈虧比是動能交易最崇高的信仰。即便勝率只要35%，配合1比3以上的盈虧比亦能獲得長期穩定的資本暴利。
+                  </p>
+                </div>
+              </div>
+
+              <!-- Interactive initial Capital modification wrapper -->
+              <div class="pt-4 border-t border-terminal-accent/40 mt-4">
+                <label class="block text-xs text-gray-400 font-medium mb-1">當前初始資金對比</label>
+                <div class="flex gap-2">
+                  <input type="number" id="curve-cap-input" placeholder="500000" class="flex-1 bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <button onclick="updateCurveCapital()" class="px-3.5 py-1.5 bg-profit hover:bg-profit/90 text-white rounded-lg text-xs font-bold transition-all">變更</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: ⚙️ 設定 -->
+        <div id="tab-settings" class="tab-content hidden max-w-2xl mx-auto space-y-6">
+          <div class="bg-terminal-card border border-terminal-accent rounded-xl shadow-lg p-6 space-y-6 text-sm">
+            <h3 class="text-base font-bold text-white border-b border-terminal-accent pb-3 flex items-center gap-2">
+              <span>⚙️</span> 交易日誌偏好設定
+            </h3>
+
+            <!-- Standard params fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-xs text-gray-400 font-medium mb-2">初始帳戶資本金 (NTD)</label>
+                <input type="number" id="setting-capital" placeholder="500000" class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none">
+              </div>
+              
+              <div>
+                <label class="block text-xs text-gray-400 font-medium mb-2">每筆交易預設手續費 per Lot</label>
+                <input type="number" id="setting-fee" placeholder="100" class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none">
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-xs text-gray-400 font-medium mb-2">每點價值預設口徑</label>
+                <div class="flex gap-2 p-1.5 bg-terminal-bg border border-terminal-accent rounded-xl w-72">
+                  <button type="button" id="set-pv-2000" onclick="chooseDefaultPv(2000)" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white transition-all text-center">2000 標準</button>
+                  <button type="button" id="set-pv-100" onclick="chooseDefaultPv(100)" class="flex-1 py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center rounded-lg">100 小型</button>
+                  <input type="hidden" id="setting-pv" value="2000">
+                </div>
+              </div>
+            </div>
+
+            <!-- Save parameters click -->
+            <div class="pt-2">
+              <button onclick="saveApplicationSettings()" class="px-6 py-2 bg-profit hover:bg-profit/90 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer">
+                儲存設定
+              </button>
+            </div>
+
+            <div class="h-px bg-terminal-accent/40"></div>
+
+            <!-- Import and Wipe controls block -->
+            <div class="space-y-4">
+              <h4 class="text-xs text-gray-400 font-bold uppercase tracking-widest font-mono">資料備份與還原</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                
+                <!-- CSV import button wrapper -->
+                <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h5 class="text-xs font-bold text-gray-300">匯入覆盤記錄 (CSV)</h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">支援匯入備份後的 CSV 格式檔案，本機暫存會被覆蓋或合併。</p>
+                  </div>
+                  <div class="mt-4">
+                    <label class="px-4 py-2 bg-terminal-accent hover:bg-[#1a2e54] text-white rounded-lg text-xs font-semibold select-none cursor-pointer flex items-center justify-center gap-1">
+                      📥 選擇 CSV 檔案...
+                      <input type="file" id="settings-csv-import" accept=".csv" onchange="importTradesFromCSV(event)" class="hidden">
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Wipe capital -->
+                <div class="bg-terminal-bg/50 border border-terminal-accent/40 rounded-xl p-4 flex flex-col justify-between">
+                  <div>
+                    <h5 class="text-xs font-bold text-loss">一鍵初始化 (清除所有損益)</h5>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">清除 local storage 所有交易與設定，回復成初始展示資料。</p>
+                  </div>
+                  <div class="mt-4">
+                    <button onclick="wipeAllData()" class="w-full px-4 py-2 bg-loss hover:bg-loss/90 text-white rounded-lg text-xs font-bold select-none cursor-pointer">
+                      💥 清除所有資料 (大盤重整)
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="h-px bg-terminal-accent/40"></div>
+
+            <!-- About momentum framework references -->
+            <div class="p-4 bg-terminal-bg/40 border border-terminal-accent/40 rounded-xl space-y-2">
+              <h4 class="text-xs font-mono text-gray-400 font-bold tracking-widest uppercase">動能交易框架 × 阿魯米期望值心法</h4>
+              <p class="text-[11px] text-gray-500 leading-relaxed">
+                本系統專為「股票期貨動能突破」與「波段加碼交易」戰法設計。我們拒絕憑感覺跟風交易（酒精衝動 A-4），嚴守在箱底起跑（A-1）、強勢主流異常爆量起跑（A-3）跟極少數高勝率的回測（A-2）。
+              </p>
+              <p class="text-[11px] text-gray-500 leading-relaxed">
+                期望值思維是一生的修煉。只要你的每次損益平均下來大於 0 （E &gt; 0），伴隨著好交易的高自律比，在複利的加持下，資產爆發只是時間問題。
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mobile Footer Navigation / Bottom Tab Bar -->
+      <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-terminal-card border-t border-terminal-accent flex justify-around items-center z-40 shadow-inner">
+        <button onclick="switchTab('dashboard')" data-tab-mob="dashboard" class="flex flex-col items-center justify-center text-profit gap-0.5">
+          <span class="text-base select-none">📊</span>
+          <span class="text-[9px] font-bold">儀表板</span>
+        </button>
+        <button onclick="switchTab('new-trade')" data-tab-mob="new-trade" class="flex flex-col items-center justify-center text-gray-400 gap-0.5">
+          <span class="text-base select-none">➕</span>
+          <span class="text-[9px] font-medium">新增</span>
+        </button>
+        <button onclick="switchTab('log')" data-tab-mob="log" class="flex flex-col items-center justify-center text-gray-400 gap-0.5">
+          <span class="text-base select-none">📋</span>
+          <span class="text-[9px] font-medium">記錄</span>
+        </button>
+        <button onclick="switchTab('curve')" data-tab-mob="curve" class="flex flex-col items-center justify-center text-gray-400 gap-0.5">
+          <span class="text-base select-none">📈</span>
+          <span class="text-[9px] font-medium">走勢</span>
+        </button>
+        <button onclick="switchTab('settings')" data-tab-mob="settings" class="flex flex-col items-center justify-center text-gray-400 gap-0.5">
+          <span class="text-base select-none">⚙️</span>
+          <span class="text-[9px] font-medium">設定</span>
+        </button>
+      </nav>
+
+    </main>
+
+    <!-- Vanilla Javascript Logic -->
+    <script>
+      // ==========================================
+      // STATE MANAGEMENT 
+      // ==========================================
+      const SEED_TRADES = [
+        {
+          id: "1713916800000", // 2026-04-24
+          code: "FIJPF",
+          name: "大聯大期05",
+          type: "個股期貨",
+          position: "底倉",
+          entryDate: "2026-04-24",
+          entryPrice: 97.3,
+          exitDate: "2026-05-13",
+          exitPrice: 111.0,
+          qty: 1,
+          pointValue: 2000,
+          fee: 108,
+          entryReason: "[A-1] 箱體突破 / 創歷史新高",
+          exitReason: "[B-4] 達標分批停利",
+          mentalState: "冷靜執行",
+          rating: "🟢好交易",
+          note: "合乎日線突破箱體型態，量能暴發，5日線之上耐心抱單，目標價分批停利減碼好範例。",
+          grossPnL: 27400,
+          netPnL: 27292
+        },
+        {
+          id: "1715990400000", // 2026-05-18
+          code: "FIQEF",
+          name: "小型國巨06",
+          type: "個股期貨",
+          position: "獨立新倉",
+          entryDate: "2026-05-18",
+          entryPrice: 464.5,
+          exitDate: "2026-05-18",
+          exitPrice: 476.5,
+          qty: 1,
+          pointValue: 100,
+          fee: 102,
+          entryReason: "[A-3] KAMA系統異常量能發動",
+          exitReason: "[B-4] 達標分批停利",
+          mentalState: "冷靜執行",
+          rating: "🟢好交易",
+          note: "看準大盤震盪時，小型國巨逆勢異常發動，短線追擊，10日線扣抵保護完備，順利咬到12點空間。",
+          grossPnL: 1200,
+          netPnL: 1098
+        },
+        {
+          id: "1715990400001", // 2026-05-18
+          code: "FIQEF",
+          name: "小型國巨06",
+          type: "個股期貨",
+          position: "獨立新倉",
+          entryDate: "2026-05-18",
+          entryPrice: 485.0,
+          exitDate: "2026-05-18",
+          exitPrice: 476.0,
+          qty: 1,
+          pointValue: 100,
+          fee: 102,
+          entryReason: "[A-4] 酒精衝動 / 怕買不到追高（檢討用）",
+          exitReason: "[B-1] 觸及 2% 獨立新倉死停損",
+          mentalState: "情緒波動",
+          rating: "🔴壞交易",
+          note: "盤中貪心，毫無進場理據，眼睜睜看著急漲受情緒鼓譟衝動市價單高掛追價，遭爆單停損懲罰，嚴正檢討！",
+          grossPnL: -900,
+          netPnL: -1002
+        }
+      ];
+
+      const DEFAULT_SETTINGS = {
+        initialCapital: 500000,
+        defaultFee: 100,
+        defaultPointValue: 2000
+      };
+
+      let state = {
+        trades: [],
+        settings: { ...DEFAULT_SETTINGS },
+        currentTab: 'dashboard',
+        logFilter: '全部',
+        logSearch: '',
+        logSort: 'date-desc',
+        charts: {
+          mini: null,
+          large: null
+        }
+      };
+
+      // Dictionary of stock futures code/names for friendly auto-completion 
+      const SAMPLE_CODE_MAP = {
+        "FIJPF": "大聯大期05",
+        "FIQEF": "小型國巨06",
+        "FIBHF": "鴻海期06",
+        "FIAAF": "台積電期05",
+        "FICDF": "聯發科期06",
+        "FIAOF": "長榮期05",
+        "FIPNF": "欣興期06"
+      };
+
+      // ==========================================
+      // INITIALIZATION & LIFECYCLE
+      // ==========================================
+      window.addEventListener('DOMContentLoaded', () => {
+        loadDataFromStorage();
+        // Set default dates on new trade tab to today
+        document.getElementById('trade-entry-date').value = getTodayDateString();
+        document.getElementById('trade-exit-date').value = getTodayDateString();
+        
+        // Start live ticker clock 
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        // Apply keyboard shortcut
+        window.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('new-trade-form').requestSubmit();
+          }
+        });
+
+        // Setup chart dimensions and update
+        switchTab('dashboard');
+      });
+
+      function getTodayDateString() {
+        const today = new Date();
+        const year = today.getFullYear();
+        let month = today.getMonth() + 1;
+        let day = today.getDate();
+        if (month < 10) month = '0' + month;
+        if (day < 10) day = '0' + day;
+        return `${year}-${month}-${day}`;
+      }
+
+      function updateClock() {
+        const now = new Date();
+        const str = now.toTimeString().split(' ')[0] + " (UTC+8)";
+        document.getElementById('mobile-clock').innerText = str;
+      }
+
+      // ==========================================
+      // STORAGE HANDLERS
+      // ==========================================
+      function loadDataFromStorage() {
+        const localSettings = localStorage.getItem('momentum_settings');
+        if (localSettings) {
+          state.settings = JSON.parse(localSettings);
+        } else {
+          state.settings = { ...DEFAULT_SETTINGS };
+          localStorage.setItem('momentum_settings', JSON.stringify(state.settings));
+        }
+
+        const localTrades = localStorage.getItem('momentum_trades');
+        if (localTrades) {
+          state.trades = JSON.parse(localTrades);
+        } else {
+          // Empty, preload seed data
+          state.trades = [ ...SEED_TRADES ];
+          localStorage.setItem('momentum_trades', JSON.stringify(state.trades));
+        }
+
+        // Sync inputs in DOM setting parameters
+        document.getElementById('setting-capital').value = state.settings.initialCapital;
+        document.getElementById('setting-fee').value = state.settings.defaultFee;
+        document.getElementById('setting-pv').value = state.settings.defaultPointValue;
+        document.getElementById('curve-cap-input').value = state.settings.initialCapital;
+        chooseDefaultPv(state.settings.defaultPointValue);
+      }
+
+      function saveDataToStorage() {
+        localStorage.setItem('momentum_settings', JSON.stringify(state.settings));
+        localStorage.setItem('momentum_trades', JSON.stringify(state.trades));
+      }
+
+      // ==========================================
+      // TAB CONTROLLER
+      // ==========================================
+      function switchTab(tabId) {
+        state.currentTab = tabId;
+
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(element => {
+          element.classList.add('hidden');
+        });
+
+        // Show active tab
+        const activeContainer = document.getElementById(`tab-${tabId}`);
+        if (activeContainer) activeContainer.classList.remove('hidden');
+
+        // Update desktop nav style
+        document.querySelectorAll('[data-tab-btn]').forEach(btn => {
+          const btnTab = btn.getAttribute('data-tab-btn');
+          if (btnTab === tabId) {
+            btn.className = "w-full flex items-center gap-3 px-4 py-3 bg-terminal-accent text-white rounded-lg transition-all text-left font-semibold border-l-4 border-profit";
+          } else {
+            btn.className = "w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-[#1a202c] hover:text-white rounded-lg transition-all text-left font-medium border-l-4 border-transparent";
+          }
+        });
+
+        // Update mobile bottom tab style
+        document.querySelectorAll('[data-tab-mob]').forEach(btn => {
+          const btnTab = btn.getAttribute('data-tab-mob');
+          if (btnTab === tabId) {
+            btn.className = "flex flex-col items-center justify-center text-profit gap-0.5";
+          } else {
+            btn.className = "flex flex-col items-center justify-center text-gray-500 hover:text-gray-300 gap-0.5";
+          }
+        });
+
+        // Mobile header title sync
+        const tabTitlesZh = {
+          'dashboard': '📊 儀表走勢',
+          'new-trade': '➕ 新增覆盤交易',
+          'log': '📋 歷史明細明審',
+          'curve': '📈 資產期望曲線',
+          'settings': '⚙️ 專案設定'
+        };
+        document.getElementById('mobile-title').innerText = tabTitlesZh[tabId] || '個股期貨運動能日誌';
+
+        // Custom tab lifecycle render callers
+        recalculateCoreStats();
+        
+        if (tabId === 'dashboard') {
+          renderDashboard();
+        } else if (tabId === 'new-trade') {
+          // update form
+          updateFormCalculations();
+        } else if (tabId === 'log') {
+          renderLog();
+        } else if (tabId === 'curve') {
+          renderCurve();
+        } else if (tabId === 'settings') {
+          // settings is plain form sync'd already
+        }
+      }
+
+      // ==========================================
+      // CALCULATION LOGIC ENGINE (ARUMI 기대값)
+      // ==========================================
+      let statsCache = {
+        equity: 0,
+        winRate: 0,
+        totalNetPnL: 0,
+        expectedValue: 0,
+        profitFactor: 0,
+        tradeCount: 0,
+        goodCount: 0,
+        badCount: 0,
+        avgProfit: 0,
+        avgLoss: 0,
+        maxDrawdown: 0
+      };
+
+      function recalculateCoreStats() {
+        const sortedTrades = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        
+        let count = sortedTrades.length;
+        let cumulativeNet = 0;
+        let goodCount = 0;
+        let badCount = 0;
+        
+        let winCount = 0;
+        let lossCount = 0;
+        let winSum = 0;
+        let lossSum = 0;
+
+        sortedTrades.forEach(tr => {
+          cumulativeNet += Number(tr.netPnL);
+          if (tr.rating === '🟢好交易') goodCount++;
+          if (tr.rating === '🔴壞交易') badCount++;
+
+          if (Number(tr.netPnL) > 0) {
+            winCount++;
+            winSum += Number(tr.netPnL);
+          } else if (Number(tr.netPnL) < 0) {
+            lossCount++;
+            lossSum += Number(tr.netPnL);
+          }
+        });
+
+        const initialCapital = Number(state.settings.initialCapital);
+        statsCache.equity = initialCapital + cumulativeNet;
+        statsCache.totalNetPnL = cumulativeNet;
+        statsCache.tradeCount = count;
+        statsCache.goodCount = goodCount;
+        statsCache.badCount = badCount;
+
+        // Win Rate
+        statsCache.winRate = count > 0 ? (winCount / count) : 0;
+
+        // Average gain/loss
+        statsCache.avgProfit = winCount > 0 ? (winSum / winCount) : 0;
+        statsCache.avgLoss = lossCount > 0 ? (lossSum / lossCount) : 0; // negative or 0
+
+        // Expected Value Equation: E = winRate * AvgProfit + (1 - winRate) * AvgLoss
+        statsCache.expectedValue = (statsCache.winRate * statsCache.avgProfit) + ((1 - statsCache.winRate) * statsCache.avgLoss);
+
+        // Profit Factor
+        statsCache.profitFactor = Math.abs(lossSum) > 0 ? (winSum / Math.abs(lossSum)) : (winSum > 0 ? winSum : 0);
+
+        // Calculate Max Drawdown % (Standard financial method)
+        let maxDD = 0;
+        let peak = initialCapital;
+        let runningCapital = initialCapital;
+
+        sortedTrades.forEach(tr => {
+          runningCapital += Number(tr.netPnL);
+          if (runningCapital > peak) {
+            peak = runningCapital;
+          }
+          let dd = peak > 0 ? (peak - runningCapital) / peak : 0;
+          if (dd > maxDD) {
+            maxDD = dd;
+          }
+        });
+        statsCache.maxDrawdown = maxDD * 100; // stored as %
+
+        // Push values to global upper Stat banner widgets in real time
+        animateValue("stat-equity", statsCache.equity, "$");
+        
+        // PNL Color rules
+        const pnlEl = document.getElementById('stat-pnl');
+        pnlEl.innerText = (statsCache.totalNetPnL >= 0 ? "+" : "") + formatNumber(statsCache.totalNetPnL);
+        if (statsCache.totalNetPnL > 0) {
+          pnlEl.className = "text-xl md:text-2xl font-bold font-mono tracking-tight text-profit";
+        } else if (statsCache.totalNetPnL < 0) {
+          pnlEl.className = "text-xl md:text-2xl font-bold font-mono tracking-tight text-loss";
+        } else {
+          pnlEl.className = "text-xl md:text-2xl font-bold font-mono tracking-tight text-gray-300";
+        }
+
+        document.getElementById('stat-trade-count').innerText = `累積成交: ${statsCache.tradeCount} 筆`;
+        
+        // Percentage Equity Change
+        const changePct = (statsCache.totalNetPnL / initialCapital) * 100;
+        const changeEl = document.getElementById('stat-equity-change');
+        changeEl.innerText = (changePct >= 0 ? "▲ +" : "▼ ") + changePct.toFixed(1) + "%";
+        changeEl.className = `text-[10px] font-semibold flex items-center gap-1 mt-1 ${changePct >= 0 ? "text-profit" : "text-loss"}`;
+
+        // Winrate display
+        document.getElementById('stat-winrate').innerText = (statsCache.winRate * 100).toFixed(1) + "%";
+        document.getElementById('stat-winrate-bar').style.width = (statsCache.winRate * 100) + "%";
+
+        // Expected E and Profit Ratio
+        document.getElementById('stat-expected-value').innerText = (statsCache.expectedValue >= 0 ? "+" : "") + statsCache.expectedValue.toFixed(0);
+        document.getElementById('stat-expected-value').className = `text-xl md:text-2xl font-bold font-mono tracking-tight ${statsCache.expectedValue >= 0 ? "text-profit" : "text-loss"}`;
+        
+        // Avg profit / Loss ratio
+        const pfFactor = statsCache.avgLoss !== 0 ? Math.abs(statsCache.avgProfit / statsCache.avgLoss) : 0;
+        document.getElementById('stat-profit-factor').innerText = `盈虧比: ${pfFactor.toFixed(2)} (獲利因子: ${statsCache.profitFactor.toFixed(2)})`;
+      }
+
+      function animateValue(id, endValue, prefix = "") {
+        const obj = document.getElementById(id);
+        if (!obj) return;
+        
+        // Clean previous values formatting
+        const startValue = parseInt(obj.innerText.replace(/[^0-9.-]+/g, "")) || 0;
+        if (startValue === endValue) {
+          obj.innerText = prefix + formatNumber(endValue);
+          return;
+        }
+
+        const duration = 400; // ms
+        const startTime = performance.now();
+
+        function update(currentTime) {
+          const elapsedTime = currentTime - startTime;
+          if (elapsedTime >= duration) {
+            obj.innerText = prefix + formatNumber(endValue);
+          } else {
+            const progress = elapsedTime / duration;
+            const value = Math.round(startValue + progress * (endValue - startValue));
+            obj.innerText = prefix + formatNumber(value);
+            requestAnimationFrame(update);
+          }
+        }
+        requestAnimationFrame(update);
+      }
+
+      function formatNumber(num) {
+        return Math.round(num).toLocaleString('zh-TW');
+      }
+
+      // ==========================================
+      // TAB 1: DASHBOARD RENDERER
+      // ==========================================
+      function renderDashboard() {
+        // Render badges
+        document.getElementById('dashboard-good-count').innerText = statsCache.goodCount;
+        document.getElementById('dashboard-bad-count').innerText = statsCache.badCount;
+
+        // Custom bad ratio feedback sentence
+        const badRatio = statsCache.tradeCount > 0 ? (statsCache.badCount / statsCache.tradeCount) * 100 : 0;
+        const pnlBanner = document.getElementById('pnl-encouragement-banner');
+        const quoteEl = document.getElementById('pnl-summary-quote');
+        
+        if (statsCache.tradeCount === 0) {
+          quoteEl.innerText = "⚠️ 尚無回覆與交易記錄。點選下方「快速新增交易」開始你今日的卓越修煉。";
+          pnlBanner.className = "p-3.5 bg-terminal-accent/35 border border-terminal-accent rounded-lg";
+        } else if (badRatio > 25) {
+          quoteEl.innerText = `⚠️ 警告！你的壞交易佔比高達 ${badRatio.toFixed(0)}%。酒精與怕買不到的追高情緒正在啃噬你的本金。立刻停手靜心！`;
+          pnlBanner.className = "p-3.5 bg-red-950/40 border border-loss rounded-lg animate-pulse";
+        } else if (statsCache.expectedValue > 0) {
+          quoteEl.innerText = "🎯 幹得好！你的數學期望值為正。保持此框架節奏，時間與數理大數法則終將站在你這邊。";
+          pnlBanner.className = "p-3.5 bg-green-950/20 border border-profit/30 rounded-lg";
+        } else {
+          quoteEl.innerText = "⚠️ 當前期望值為負，請回顧是否落入不遵守停損或追高（A-4）陷阱，調整好再出發。";
+          pnlBanner.className = "p-3.5 bg-orange-950/10 border border-warning/30 rounded-lg";
+        }
+
+        // Render recent trades
+        const recentBody = document.getElementById('recent-trades-body');
+        recentBody.innerHTML = '';
+
+        // Slice latest 5
+        const sortedDesc = [...state.trades].sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
+        const latest5 = sortedDesc.slice(0, 5);
+
+        if (latest5.length === 0) {
+          recentBody.innerHTML = `
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-xs text-gray-500 font-normal">
+                暫無覆盤數據，請先點擊快速新增。
+              </td>
+            </tr>
+          `;
+        } else {
+          latest5.forEach(tr => {
+            const trValue = Number(tr.netPnL);
+            const entryFormatted = tr.entryDate.substring(5); // MM-DD
+            const trColor = trValue > 0 ? 'text-profit' : (trValue < 0 ? 'text-loss' : 'text-gray-300');
+            const sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+            
+            const trRow = document.createElement('tr');
+            trRow.className = "hover:bg-terminal-accent/15 cursor-pointer transition-colors";
+            trRow.onclick = () => { switchTab('log'); document.getElementById('log-search-input').value = tr.code; triggerLogSearch(tr.code); };
+            trRow.innerHTML = `
+              <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${entryFormatted}</td>
+              <td class="px-4 py-4.5 text-sm font-semibold text-white">
+                ${tr.code} <span class="text-xs text-gray-400 font-light ml-1">${tr.name}</span>
+              </td>
+              <td class="px-4 py-4.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-terminal-accent/40 text-blue-300">
+                  ${tr.position}
+                </span>
+              </td>
+              <td class="px-4 py-4.5 text-xs text-gray-300 font-mono">${tr.entryPrice} → ${tr.exitPrice}</td>
+              <td class="px-4 py-4.5 text-sm font-bold ${trColor} font-mono">
+                ${sign}${formatNumber(Math.abs(trValue))}
+                ${trValue > 0 ? '<span class="text-[9px] ml-1 opacity-70">🎯</span>' : ''}
+              </td>
+              <td class="px-4 py-4.5 text-center text-base select-none">${tr.rating.substring(0,2)}</td>
+            `;
+            recentBody.appendChild(trRow);
+          });
+        }
+
+        // Mini chart rendering
+        renderMiniChart();
+      }
+
+      function renderMiniChart() {
+        const ctx = document.getElementById('mini-equity-chart').getContext('2d');
+        if (state.charts.mini) {
+          state.charts.mini.destroy();
+        }
+
+        // Sorting trades chronologically to build equity walk
+        const sortedChrono = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        
+        let initialCap = Number(state.settings.initialCapital);
+        let dataPoints = [initialCap];
+        let labels = ['初始'];
+
+        let runValue = initialCap;
+        sortedChrono.forEach(tr => {
+          runValue += Number(tr.netPnL);
+          dataPoints.push(runValue);
+          labels.push(tr.entryDate.substring(5)); // MM-DD
+        });
+
+        // Chart line gradient style
+        let grad = ctx.createLinearGradient(0, 0, 0, 150);
+        grad.addColorStop(0, 'rgba(38, 166, 91, 0.25)');
+        grad.addColorStop(1, 'rgba(38, 166, 91, 0.0)');
+
+        state.charts.mini = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: '累計淨值',
+              data: dataPoints,
+              borderColor: '#26A65B',
+              borderWidth: 2,
+              fill: true,
+              backgroundColor: grad,
+              tension: 0.1,
+              pointBackgroundColor: '#1F3864',
+              pointHoverBackgroundColor: '#26A65B',
+              pointRadius: 2,
+              pointHoverRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(31, 56, 100, 0.15)' },
+                ticks: { color: '#6B7280', font: { size: 9, family: 'JetBrains Mono' } }
+              },
+              y: {
+                grid: { color: 'rgba(31, 56, 100, 0.15)' },
+                ticks: { color: '#6B7280', font: { size: 9, family: 'JetBrains Mono' }, callback: (v) => '$' + v.toLocaleString() }
+              }
+            }
+          }
+        });
+      }
+
+      // ==========================================
+      // TAB 2: NEW TRADE FORM INTERACTION
+      // ==========================================
+      function predictName(code) {
+        const upperCode = code.toUpperCase();
+        if (SAMPLE_CODE_MAP[upperCode]) {
+          document.getElementById('trade-name').value = SAMPLE_CODE_MAP[upperCode];
+        }
+      }
+
+      function setPointValue(val) {
+        document.getElementById('trade-point-value').value = val;
+        
+        const btnStd = document.getElementById('pv-std');
+        const btnMini = document.getElementById('pv-mini');
+
+        if (val === 2000) {
+          btnStd.className = "flex-1 text-[11px] font-bold py-1 bg-terminal-accent text-white rounded transition-all";
+          btnMini.className = "flex-1 text-[11px] font-medium py-1 text-gray-400 hover:text-white rounded transition-all";
+        } else {
+          btnStd.className = "flex-1 text-[11px] font-medium py-1 text-gray-400 hover:text-white rounded transition-all";
+          btnMini.className = "flex-1 text-[11px] font-bold py-1 bg-terminal-accent text-white rounded transition-all";
+        }
+        updateFormCalculations();
+      }
+
+      function setPositionAttr(pos) {
+        document.getElementById('trade-position').value = pos;
+        
+        // Highlight active button
+        document.querySelectorAll('.pos-btn').forEach(btn => {
+          if (btn.getAttribute('data-pos') === pos) {
+            btn.className = "pos-btn py-1.5 text-xs font-semibold rounded-lg bg-terminal-accent text-white transition-all";
+          } else {
+            btn.className = "pos-btn py-1.5 text-xs text-gray-400 hover:text-white transition-all rounded-lg";
+          }
+        });
+      }
+
+      function setRating(rating) {
+        document.getElementById('trade-rating').value = rating;
+
+        const btnGood = document.getElementById('btn-rating-good');
+        const btnBad = document.getElementById('btn-rating-bad');
+        const warningBanner = document.getElementById('form-warning-banner');
+
+        if (rating === '🟢好交易') {
+          btnGood.className = "flex items-center justify-center gap-3 py-4 bg-profit border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-profit/50 text-sm";
+          btnBad.className = "flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm";
+          warningBanner.classList.add('hidden');
+        } else {
+          btnGood.className = "flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm";
+          btnBad.className = "flex items-center justify-center gap-3 py-4 bg-loss border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-loss/50 text-sm";
+          warningBanner.classList.remove('hidden');
+        }
+      }
+
+      function updateFormCalculations(triggerType) {
+        const entryPrice = parseFloat(document.getElementById('trade-entry-price').value) || 0;
+        const exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
+        const qty = parseInt(document.getElementById('trade-qty').value) || 1;
+        const pointValue = parseInt(document.getElementById('trade-point-value').value) || 2000;
+        
+        // Auto default lot fee calculation if not user modified
+        const feeInput = document.getElementById('trade-fee');
+        if (triggerType !== 'manual-fee') {
+          const calculatedDefaultFee = qty * Number(state.settings.defaultFee);
+          feeInput.value = calculatedDefaultFee;
+        }
+        const fee = parseFloat(feeInput.value) || 0;
+
+        // Core math formulas
+        const grossPnL = (exitPrice - entryPrice) * qty * pointValue;
+        const netPnL = grossPnL - fee;
+        
+        const contractTotalValue = entryPrice * qty * pointValue;
+        const netPnLPct = contractTotalValue > 0 ? (netPnL / contractTotalValue) * 100 : 0;
+
+        // Render calculations to form interface in realtime
+        document.getElementById('calc-gross').innerText = (grossPnL >= 0 ? "+$" : "-$") + formatNumber(Math.abs(grossPnL));
+        document.getElementById('calc-fee').innerText = "$" + formatNumber(fee);
+        
+        const netEl = document.getElementById('calc-net');
+        netEl.innerText = (netPnL >= 0 ? "+$" : "-$") + formatNumber(Math.abs(netPnL));
+        
+        const pctEl = document.getElementById('calc-pnl-pct');
+        pctEl.innerText = (netPnLPct >= 0 ? "+" : "") + netPnLPct.toFixed(2) + "%";
+
+        // Display check or cross indicators
+        const targetIcon = document.getElementById('calc-target-icon');
+        if (netPnL > 0) {
+          netEl.className = "text-base font-bold text-profit";
+          pctEl.className = "text-base font-bold text-profit";
+          targetIcon.innerText = "🎯";
+        } else if (netPnL < 0) {
+          netEl.className = "text-base font-bold text-loss";
+          pctEl.className = "text-base font-bold text-loss";
+          targetIcon.innerText = "💥";
+        } else {
+          netEl.className = "text-base font-bold text-gray-300";
+          pctEl.className = "text-base font-bold text-gray-300";
+          targetIcon.innerText = "";
+        }
+      }
+
+      function clearTradeForm() {
+        document.getElementById('new-trade-form').reset();
+        document.getElementById('trade-entry-date').value = getTodayDateString();
+        document.getElementById('trade-exit-date').value = getTodayDateString();
+        setPointValue(state.settings.defaultPointValue);
+        setPositionAttr('底倉');
+        setRating('🟢好交易');
+        updateFormCalculations();
+      }
+
+      function saveTrade(event) {
+        event.preventDefault();
+
+        const codeInput = document.getElementById('trade-code').value.trim().toUpperCase();
+        if (!codeInput) {
+          alert("請輸入商品代號");
+          return;
+        }
+
+        const entryDateVal = document.getElementById('trade-entry-date').value;
+        const exitDateVal = document.getElementById('trade-exit-date').value;
+
+        if (new Date(exitDateVal) < new Date(entryDateVal)) {
+          alert('⚠️ 異常：出場日期不可早於進場日期！');
+          return;
+        }
+
+        const entryPrice = parseFloat(document.getElementById('trade-entry-price').value) || 0;
+        const exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
+        const qty = parseInt(document.getElementById('trade-qty').value) || 1;
+        const pointValue = parseInt(document.getElementById('trade-point-value').value) || 2000;
+        const fee = parseFloat(document.getElementById('trade-fee').value) || 0;
+
+        const grossPnL = (exitPrice - entryPrice) * qty * pointValue;
+        const netPnL = grossPnL - fee;
+
+        const newObj = {
+          id: Date.now().toString(),
+          code: codeInput,
+          name: document.getElementById('trade-name').value.trim(),
+          type: document.querySelector('input[name="trade-type"]:checked').value,
+          position: document.getElementById('trade-position').value,
+          entryDate: entryDateVal,
+          entryPrice: entryPrice,
+          exitDate: exitDateVal,
+          exitPrice: exitPrice,
+          qty: qty,
+          pointValue: pointValue,
+          fee: fee,
+          entryReason: document.getElementById('trade-entry-reason').value,
+          exitReason: document.getElementById('trade-exit-reason').value,
+          mentalState: document.getElementById('trade-mental-state').value,
+          rating: document.getElementById('trade-rating').value,
+          note: document.getElementById('trade-note').value.trim(),
+          grossPnL: grossPnL,
+          netPnL: netPnL
+        };
+
+        state.trades.push(newObj);
+        saveDataToStorage();
+        
+        // Visual notification
+        alert("🎉 儲存成功！此筆交易已記入動能覆盤資料。");
+        
+        clearTradeForm();
+        switchTab('dashboard');
+      }
+
+      // ==========================================
+      // TAB 3: TRADE LOG TABLE & EXPANSIVITY
+      // ==========================================
+      function setLogFilter(filterName) {
+        state.logFilter = filterName;
+
+        // Style buttons
+        document.querySelectorAll('#log-filter-buttons button').forEach(b => {
+          if (b.innerText.includes(filterName)) {
+            b.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all";
+          } else {
+            b.className = "px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all";
+          }
+        });
+        renderLog();
+      }
+
+      function triggerLogSearch(term) {
+        state.logSearch = term.trim().toLowerCase();
+        renderLog();
+      }
+
+      function triggerLogSort(criteria) {
+        state.logSort = criteria;
+        renderLog();
+      }
+
+      function renderLog() {
+        const body = document.getElementById('log-trades-body');
+        const emptyState = document.getElementById('log-empty-state');
+        body.innerHTML = '';
+
+        // Filter and Search logic
+        let processed = [...state.trades];
+
+        // Search code & name
+        if (state.logSearch) {
+          processed = processed.filter(tr => 
+            tr.code.toLowerCase().includes(state.logSearch) || 
+            tr.name.toLowerCase().includes(state.logSearch)
+          );
+        }
+
+        // Dropdown categorizations 
+        if (state.logFilter === '🟢好交易') {
+          processed = processed.filter(tr => tr.rating === '🟢好交易');
+        } else if (state.logFilter === '🔴壞交易') {
+          processed = processed.filter(tr => tr.rating === '🔴壞交易');
+        } else if (state.logFilter === '獲利') {
+          processed = processed.filter(tr => Number(tr.netPnL) > 0);
+        } else if (state.logFilter === '虧損') {
+          processed = processed.filter(tr => Number(tr.netPnL) < 0);
+        }
+
+        // Sorting
+        if (state.logSort === 'date-desc') {
+          processed.sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate) || Number(b.id) - Number(a.id));
+        } else if (state.logSort === 'date-asc') {
+          processed.sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || Number(a.id) - Number(b.id));
+        } else if (state.logSort === 'pnl-desc') {
+          processed.sort((a, b) => Number(b.netPnL) - Number(a.netPnL));
+        } else if (state.logSort === 'pnl-asc') {
+          processed.sort((a, b) => Number(a.netPnL) - Number(b.netPnL));
+        }
+
+        if (processed.length === 0) {
+          emptyState.classList.remove('hidden');
+          const motivEl = document.getElementById('empty-motivational-text');
+          if (state.trades.length === 0) {
+            motivEl.innerText = "還沒有交易記錄。點擊「新增交易」開始你的第一筆期貨動能覆盤。";
+          } else {
+            motivEl.innerText = "無符合搜尋或分類條件的交易。請放寬搜尋或篩選器設定。";
+          }
+        } else {
+          emptyState.classList.add('hidden');
+          
+          processed.forEach(tr => {
+            const trValue = Number(tr.netPnL);
+            const isProfit = trValue > 0;
+            const trColor = isProfit ? 'text-profit' : (trValue < 0 ? 'text-loss' : 'text-gray-300');
+            const sign = trValue > 0 ? "+$" : (trValue < 0 ? "-$" : "$");
+            
+            const trRow = document.createElement('tr');
+            trRow.className = "hover:bg-terminal-accent/10 border-b border-terminal-accent/20 cursor-pointer font-medium transition-colors";
+            trRow.id = `row-summary-${tr.id}`;
+            trRow.setAttribute('onclick', `toggleAccordion('${tr.id}')`);
+
+            trRow.innerHTML = `
+              <td class="px-4 py-4.5 text-center text-xs text-gray-500 font-mono select-none" id="icon-indicator-${tr.id}">▶</td>
+              <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${tr.entryDate.substring(5)} → ${tr.exitDate.substring(5)}</td>
+              <td class="px-4 py-4.5 font-bold text-white text-sm">
+                ${tr.code}
+                <span class="block text-[11px] font-normal text-gray-500">${tr.name}</span>
+              </td>
+              <td class="px-4 py-4.5 text-xs text-gray-400">
+                ${tr.type}
+                <span class="block text-[10px] text-gray-500 font-mono">${tr.qty} 口/張</span>
+              </td>
+              <td class="px-4 py-4.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-terminal-accent/30 text-blue-300">
+                  ${tr.position}
+                </span>
+              </td>
+              <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${tr.entryPrice.toFixed(1)}</td>
+              <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${tr.exitPrice.toFixed(1)}</td>
+              <td class="px-4 py-4.5 text-right text-sm font-bold ${trColor} font-mono">
+                ${sign}${formatNumber(Math.abs(trValue))}
+              </td>
+              <td class="px-4 py-4.5 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${tr.rating === '🟢好交易' ? 'bg-green-950/40 text-profit' : 'bg-red-950/40 text-loss'}">
+                  ${tr.rating}
+                </span>
+                <span class="block text-[9.5px] text-gray-500 font-light mt-0.5">${tr.mentalState}</span>
+              </td>
+              <td class="px-4 py-4.5 text-center" onclick="event.stopPropagation()">
+                <button onclick="deleteTrade('${tr.id}')" class="px-2 py-1 text-loss hover:bg-loss/10 rounded text-xs select-none cursor-pointer transition-all">刪除</button>
+              </td>
+            `;
+            body.appendChild(trRow);
+
+            // Accordion detail view container 
+            const trDetail = document.createElement('tr');
+            trDetail.id = `row-detail-${tr.id}`;
+            trDetail.className = "hidden bg-terminal-bg/85 font-normal select-text cursor-default";
+            trDetail.innerHTML = `
+              <td colspan="10" class="p-5 border-l-2 border-terminal-accent">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-300">
+                  <div class="space-y-2">
+                    <div class="text-gray-500 font-medium">進出場分析</div>
+                    <div><span class="text-gray-500">進場依據:</span> <span class="bg-terminal-card px-2 py-1.5 rounded inline-block mt-1 border border-terminal-accent/40 font-mono text-white text-[11px]">${tr.entryReason}</span></div>
+                    <div><span class="text-gray-500">出場依據:</span> <span class="bg-terminal-card px-2 py-1.5 rounded inline-block mt-1 border border-terminal-accent/40 font-mono text-white text-[11px]">${tr.exitReason}</span></div>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="text-gray-500 font-medium font-mono">成本細節 (Point size: ${tr.pointValue})</div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div>毛損利額: $${formatNumber(tr.grossPnL)}</div>
+                      <div>估手續費: $${formatNumber(tr.fee)}</div>
+                      <div class="col-span-2 text-warning">對比資金成數: ${(tr.entryPrice * tr.qty * tr.pointValue / state.settings.initialCapital * 100).toFixed(1)}%</div>
+                    </div>
+                  </div>
+                  <div class="space-y-2 md:col-span-1">
+                    <div class="text-gray-500 font-medium">思維思緒與覆盤檢討</div>
+                    <p class="leading-relaxed text-gray-300 bg-terminal-card p-3 rounded-lg border border-terminal-accent/50 italic select-text">
+                      ${tr.note || '無填寫覆盤備註。對情緒如實記錄，是擊敗不理性的最重要關鍵！'}
+                    </p>
+                  </div>
+                </div>
+              </td>
+            `;
+            body.appendChild(trDetail);
+          });
+        }
+      }
+
+      function toggleAccordion(id) {
+        const rowDetail = document.getElementById(`row-detail-${id}`);
+        const indicator = document.getElementById(`icon-indicator-${id}`);
+        const rowSummary = document.getElementById(`row-summary-${id}`);
+
+        if (rowDetail.classList.contains('hidden')) {
+          rowDetail.classList.remove('hidden');
+          rowSummary.classList.add('bg-terminal-accent/5');
+          indicator.innerText = "▼";
+          indicator.className = "px-4 py-4.5 text-center text-xs text-profit font-mono select-none";
+        } else {
+          rowDetail.classList.add('hidden');
+          rowSummary.classList.remove('bg-terminal-accent/5');
+          indicator.innerText = "▶";
+          indicator.className = "px-4 py-4.5 text-center text-xs text-gray-500 font-mono select-none";
+        }
+      }
+
+      function deleteTrade(id) {
+        const tr = state.trades.find(t => t.id === id);
+        if (!tr) return;
+
+        const isOk = confirm(`⚠️ 確定要刪除「${tr.code} ${tr.name}」這筆交易覆盤記錄嗎？該操作不可復原。`);
+        if (isOk) {
+          state.trades = state.trades.filter(t => t.id !== id);
+          saveDataToStorage();
+          recalculateCoreStats();
+          renderLog();
+        }
+      }
+
+      // ==========================================
+      // CSV EXPORT / IMPORT PROCEDURES
+      // ==========================================
+      function exportTradesToCSV() {
+        if (state.trades.length === 0) {
+          alert('暫無任何覆盤數據供導出。');
+          return;
+        }
+
+        let csvContent = "\ufeff"; // BOM
+        const headers = ["ID", "商品代號", "中文名稱", "型態", "部位屬性", "進場日期", "進場價", "出場日期", "出場價", "口數", "每點價值", "手續費", "進場依據", "出場依據", "身心狀態", "評等", "備註", "毛損益", "淨損益"];
+        csvContent += headers.map(h => `"${h}"`).join(",") + "\n";
+
+        state.trades.forEach(tr => {
+          const row = [
+            tr.id,
+            tr.code,
+            tr.name,
+            tr.type,
+            tr.position,
+            tr.entryDate,
+            tr.entryPrice,
+            tr.exitDate,
+            tr.exitPrice,
+            tr.qty,
+            tr.pointValue,
+            tr.fee,
+            tr.entryReason,
+            tr.exitReason,
+            tr.mentalState,
+            tr.rating,
+            tr.note.replace(/"/g, '""'),
+            tr.grossPnL,
+            tr.netPnL
+          ];
+          csvContent += row.map(val => `"${val}"`).join(",") + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `個股期貨動能覆盤資料_${getTodayDateString()}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function importTradesFromCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const text = e.target.result;
+          const rows = text.split("\n");
+          if (rows.length < 2) {
+            alert("CSV 格式異常（無有效數據行）。");
+            return;
+          }
+
+          let parsedCount = 0;
+          let newTradesList = [];
+
+          // Parse CSV robustly
+          for (let i = 1; i < rows.length; i++) {
+            const rawRow = rows[i].trim();
+            if (!rawRow) continue;
+
+            // Regex split comma respecting quotes
+            const matches = rawRow.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+            const cols = matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+            if (cols.length < 18) continue; // safety skip incomplete rows
+
+            newTradesList.push({
+              id: cols[0] || Date.now().toString() + i,
+              code: cols[1] || "FIUNKNOWN",
+              name: cols[2] || "未命名商品",
+              type: cols[3] || "個股期貨",
+              position: cols[4] || "底倉",
+              entryDate: cols[5] || getTodayDateString(),
+              entryPrice: parseFloat(cols[6]) || 0,
+              exitDate: cols[7] || getTodayDateString(),
+              exitPrice: parseFloat(cols[8]) || 0,
+              qty: parseInt(cols[9]) || 1,
+              pointValue: parseInt(cols[10]) || 2000,
+              fee: parseFloat(cols[11]) || 100,
+              entryReason: cols[12] || "[A-1] 箱體突破 / 創歷史新高",
+              exitReason: cols[13] || "[B-4] 達標分批停利",
+              mentalState: cols[14] || "冷靜執行",
+              rating: cols[15] || "🟢好交易",
+              note: cols[16] || "",
+              grossPnL: parseFloat(cols[17]) || 0,
+              netPnL: parseFloat(cols[18]) || 0,
+            });
+            parsedCount++;
+          }
+
+          if (parsedCount > 0) {
+            const isAppend = confirm(`✅ 成功解析 ${parsedCount} 筆交易！\n按下「確定」將合併現有資料。\n按下「取消」將完全覆蓋當前資料。`);
+            if (isAppend) {
+              state.trades = [...state.trades, ...newTradesList];
+            } else {
+              state.trades = newTradesList;
+            }
+            saveDataToStorage();
+            recalculateCoreStats();
+            renderDashboard();
+            alert("資料匯入與統計重新整合成功！");
+          } else {
+            alert("未能成功解析出任何符合規格的交易明細。請比對匯出的 CSV 標準格式。");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // ==========================================
+      // TAB 4: EQUITY CURVE PLOTS 
+      // ==========================================
+      function renderCurve() {
+        // Sync Curve Capital inputs
+        document.getElementById('curve-cap-input').value = state.settings.initialCapital;
+
+        // Render mini components values below details
+        document.getElementById('curve-avg-win').innerText = "$" + formatNumber(statsCache.avgProfit);
+        document.getElementById('curve-avg-loss').innerText = "$" + formatNumber(statsCache.avgLoss);
+        document.getElementById('curve-profit-factor').innerText = statsCache.avgLoss !== 0 ? Math.abs(statsCache.avgProfit / statsCache.avgLoss).toFixed(2) : "獲利極佳(100.00)";
+        document.getElementById('curve-max-dd').innerText = statsCache.maxDrawdown.toFixed(2) + "%";
+        
+        const netTotalEl = document.getElementById('curve-total-net');
+        netTotalEl.innerText = (statsCache.totalNetPnL >= 0 ? "+" : "-") + "$" + formatNumber(Math.abs(statsCache.totalNetPnL));
+        netTotalEl.className = `font-bold text-sm ${statsCache.totalNetPnL >= 0 ? "text-profit" : "text-loss"}`;
+
+        renderLargeCurveChart();
+      }
+
+      function updateCurveCapital() {
+        const inputVal = parseInt(document.getElementById('curve-cap-input').value) || 500000;
+        state.settings.initialCapital = inputVal;
+        document.getElementById('setting-capital').value = inputVal; // sync settings page
+        saveDataToStorage();
+        recalculateCoreStats();
+        renderCurve();
+        alert(`初始資本已更新為 $${formatNumber(inputVal)}。已重新演算最大回撤與淨值分佈圖。`);
+      }
+
+      function renderLargeCurveChart() {
+        const ctx = document.getElementById('large-equity-chart').getContext('2d');
+        if (state.charts.large) {
+          state.charts.large.destroy();
+        }
+
+        const sortedChrono = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        
+        let initialCap = Number(state.settings.initialCapital);
+        let dataPoints = [initialCap];
+        let runningMaxPoints = [initialCap];
+        let labels = ['初始資本'];
+
+        let runValue = initialCap;
+        let peakValue = initialCap;
+
+        sortedChrono.forEach(tr => {
+          runValue += Number(tr.netPnL);
+          dataPoints.push(runValue);
+          labels.push(`${tr.entryDate.substring(5)} (${tr.code})`);
+
+          if (runValue > peakValue) {
+            peakValue = runValue;
+          }
+          runningMaxPoints.push(peakValue);
+        });
+
+        // Background color fill logic (green when above initial limit, red when below)
+        // Chart.js allows a custom canvas color or gradient segment 
+        // We can draw standard line datasets perfectly 
+        state.charts.large = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '帳戶淨值走勢',
+                data: dataPoints,
+                borderColor: '#26A65B',
+                borderWidth: 3,
+                fill: {
+                  target: 'origin',
+                  above: 'rgba(38, 166, 91, 0.08)',   // Green fill above initial capital
+                  below: 'rgba(231, 76, 60, 0.08)'    // Red fill below initial capital
+                },
+                backgroundColor: 'rgba(38, 166, 91, 0.05)',
+                tension: 0.15,
+                pointBackgroundColor: (context) => {
+                  const idx = context.dataIndex;
+                  if (idx === 0) return '#1F3864';
+                  // color profit green or loss red per points
+                  return dataPoints[idx] >= initialCap ? '#26A65B' : '#E74C3C';
+                },
+                pointRadius: 4,
+                pointHoverRadius: 8
+              },
+              {
+                label: '資產高點水位 (Peak)',
+                data: runningMaxPoints,
+                borderColor: '#ED7D31',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0,
+                pointRadius: 0
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#9CA3AF',
+                  font: { size: 10, family: 'system-ui' }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += '$' + Math.round(context.parsed.y).toLocaleString();
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(31, 56, 100, 0.2)' },
+                ticks: { color: '#9CA3AF', font: { size: 9, family: 'JetBrains Mono' } }
+              },
+              y: {
+                grid: { color: 'rgba(31, 56, 100, 0.2)' },
+                ticks: { color: '#9CA3AF', font: { size: 9, family: 'JetBrains Mono' }, callback: (v) => '$' + v.toLocaleString() }
+              }
+            }
+          }
+        });
+      }
+
+      // ==========================================
+      // TAB 5: SETTINGS ACTIONS
+      // ==========================================
+      function chooseDefaultPv(val) {
+        document.getElementById('setting-pv').value = val;
+        const btn2k = document.getElementById('set-pv-2000');
+        const btn100 = document.getElementById('set-pv-100');
+
+        if (val === 2000) {
+          btn2k.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white transition-all text-center";
+          btn100.className = "flex-1 py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center rounded-lg";
+        } else {
+          btn2k.className = "flex-1 py-1.5 text-xs text-gray-400 hover:text-white transition-all text-center rounded-lg";
+          btn100.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white transition-all text-center";
+        }
+      }
+
+      function saveApplicationSettings() {
+        const capital = parseInt(document.getElementById('setting-capital').value) || 500000;
+        const fee = parseInt(document.getElementById('setting-fee').value) || 100;
+        const defaultPv = parseInt(document.getElementById('setting-pv').value) || 2000;
+
+        state.settings.initialCapital = capital;
+        state.settings.defaultFee = fee;
+        state.settings.defaultPointValue = defaultPv;
+
+        saveDataToStorage();
+        recalculateCoreStats();
+        
+        alert("✔️ 個人初始設定已更新並存檔成效！您的期望運算與損益曲線也已重新同步。");
+        switchTab('dashboard');
+      }
+
+      function wipeAllData() {
+        const first = confirm("⚠️ 確定要刪除所有本機交易明細與自訂參數設定嗎？這項動作將清除本機的所有記錄！");
+        if (first) {
+          const second = confirm("💥 請再次確認！這對你的覆盤是一次重大轉折。確定完全重整 (重設為展示資料) 嗎？");
+          if (second) {
+            localStorage.clear();
+            loadDataFromStorage();
+            recalculateCoreStats();
+            renderDashboard();
+            alert("💥 資料已完全清空，並回復為展示範例交易明細。你可以依循動能框架重新出發！");
+            switchTab('dashboard');
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

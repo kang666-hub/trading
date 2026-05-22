@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-terminal-bg: #121824;      /* Slightly lighter, refined obsidian dark background */
+  --color-terminal-card: #1b2234;    /* Slightly lighter, high contrast slate-blue card background */
+  --color-terminal-accent: #314158;  /* Vibrant high-contrast steel blue border for inputs/cards */
+  --color-profit: #2ebd6f;           /* Enhanced bright emerald green */
+  --color-loss: #f25f5f;             /* Vibrant rose red */
+  --color-warning: #f59e0b;          /* Luminous orange for expectations */
+  --font-mono: 'JetBrains Mono', monospace;
+}

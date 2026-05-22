@@ -1,0 +1,6 @@
+{
+  "name": "個股期貨動能交易日誌",
+  "description": "專為台灣個股期貨動能交易者設計的覆盤與期望值統計日誌",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
