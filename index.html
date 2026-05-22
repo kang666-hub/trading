@@ -498,7 +498,7 @@
                 <!-- Mind state -->
                 <div class="md:col-span-2">
                   <label class="block text-xs text-gray-400 font-medium mb-1.5">身心狀態</label>
-                  <select id="trade-mental-state" required class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
+                  <select id="trade-mental-state" required onchange="updateFormCalculations()" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none">
                     <option value="冷靜執行">冷靜執行 (理性心流中)</option>
                     <option value="沒睡飽">沒睡飽 (精神稍微恍惚)</option>
                     <option value="情緒波動">情緒波動 (急著扳回損失或亢奮)</option>
@@ -507,26 +507,22 @@
                   </select>
                 </div>
 
-                <!-- Prominent Quality Rating Toggle -->
+                <!-- Prominent Quality Rating (System Automatically Judged) -->
                 <div class="md:col-span-2">
-                  <label class="block text-xs text-gray-400 font-bold mb-2">框架執行評等 (核心紀律)</label>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button type="button" id="btn-rating-good" onclick="setRating('🟢好交易')" class="flex items-center justify-center gap-3 py-4 bg-profit border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-profit/50 text-sm">
-                      <span class="text-2xl">🟢</span>
-                      <div class="text-left leading-tight">
-                        <div class="text-md font-bold">好交易</div>
-                        <div class="text-[10px] font-normal text-white/80">符合框架，即使虧損也是對的</div>
+                  <label class="block text-xs text-gray-400 font-bold mb-2">🛡️ 交易紀律評等 (系統自動評估判定)</label>
+                  <div id="system-rating-container" class="bg-terminal-bg border border-terminal-accent/40 rounded-xl p-4 space-y-3">
+                    <div class="flex items-start gap-3 p-1">
+                      <span class="text-3xl select-none leading-none">🟢</span>
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-bold text-white">判定結果：</span>
+                          <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-green-950/40 border border-profit/30 text-profit">🟢好交易</span>
+                        </div>
+                        <p class="text-xs text-gray-400 font-normal leading-relaxed">請如實填寫您的進出場、倉位與身心狀況。系統將自動依據當前風險因子與核心心理紀律為您客觀判定本筆交易之好壞！</p>
                       </div>
-                    </button>
-                    <button type="button" id="btn-rating-bad" onclick="setRating('🔴壞交易')" class="flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm">
-                      <span class="text-2xl">🔴</span>
-                      <div class="text-left leading-tight">
-                        <div class="text-md font-bold">壞交易</div>
-                        <div class="text-[10px] font-normal text-gray-500">違反框架，即使獲利也是錯的</div>
-                      </div>
-                    </button>
-                    <input type="hidden" id="trade-rating" value="🟢好交易">
+                    </div>
                   </div>
+                  <input type="hidden" id="trade-rating" value="🟢好交易">
                 </div>
 
                 <!-- Notes -->
@@ -847,8 +843,9 @@
 
             <!-- Save parameters click -->
             <div class="pt-2">
-              <button onclick="saveApplicationSettings()" class="px-6 py-2 bg-profit hover:bg-profit/90 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer">
-                儲存設定
+              <button onclick="saveApplicationSettings()" class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#2ebd73] hover:to-[#047857] text-white border border-[#10b981]/40 shadow-xl shadow-emerald-950/50 hover:shadow-emerald-500/10 rounded-xl text-sm font-bold tracking-wider transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                <span>💾</span>
+                <span>儲存並套用設定 (Save Preferences)</span>
               </button>
             </div>
 
@@ -1720,18 +1717,13 @@
       function setRating(rating) {
         document.getElementById('trade-rating').value = rating;
 
-        const btnGood = document.getElementById('btn-rating-good');
-        const btnBad = document.getElementById('btn-rating-bad');
         const warningBanner = document.getElementById('form-warning-banner');
-
-        if (rating === '🟢好交易') {
-          btnGood.className = "flex items-center justify-center gap-3 py-4 bg-profit border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-profit/50 text-sm";
-          btnBad.className = "flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm";
-          warningBanner.classList.add('hidden');
-        } else {
-          btnGood.className = "flex items-center justify-center gap-3 py-4 bg-terminal-bg border-2 border-terminal-accent text-gray-400 font-semibold rounded-xl transition-all shadow-md cursor-pointer select-none hover:text-white text-sm";
-          btnBad.className = "flex items-center justify-center gap-3 py-4 bg-loss border-2 border-transparent text-white font-bold rounded-xl transition-all shadow-md cursor-pointer select-none ring-offset-terminal-bg focus:ring-2 focus:ring-loss/50 text-sm";
-          warningBanner.classList.remove('hidden');
+        if (warningBanner) {
+          if (rating === '🟢好交易') {
+            warningBanner.classList.add('hidden');
+          } else {
+            warningBanner.classList.remove('hidden');
+          }
         }
       }
 
@@ -1840,6 +1832,74 @@
               }
               contributionEl.innerHTML = `<span class="${colorClass}">${text}</span>`;
             }
+          }
+        }
+
+        // =====================================
+        // AUTO DETERMINED DISCIPLINE RATING SYSTEM
+        // =====================================
+        const isClosed = document.getElementById('trade-is-closed').value === "true";
+        const mentalState = document.getElementById('trade-mental-state').value;
+        const initialCapital = Number(state.settings.initialCapital) || 500000;
+        const riskThreshold = initialCapital * 0.05; // 5% catastrophic capital limit
+
+        let computedRating = "🟢好交易";
+        let ratingReason = "【符合框架】交易時處於冷靜、理性的狀態建倉，且風險控制在健康範圍，符合期貨動能核心紀律。";
+        let ratingBadgeClass = "bg-green-950/40 border border-profit/30 text-profit";
+        let ratingEmoji = "🟢";
+
+        const isEmotional = (mentalState === "情緒波動" || mentalState === "不理性衝動" || mentalState === "壓力過大");
+
+        if (isEmotional) {
+          computedRating = "🔴壞交易";
+          ratingReason = "【違反框架】建倉時身心處於【" + mentalState + "】心態。動能交易最忌急躁、焦慮與情緒化交易，此筆無疑是受情緒驅使的壞交易。";
+          ratingBadgeClass = "bg-red-950/40 border border-loss/30 text-loss";
+          ratingEmoji = "🔴";
+        } else if (isClosed && netPnL < 0 && Math.abs(netPnL) > riskThreshold) {
+          computedRating = "🔴壞交易";
+          ratingReason = "【違反框架】平倉虧損金額 (" + formatNumber(Math.abs(netPnL)) + ") 已超越 5% 資本風限臨界線，代表未切實執行初始停損或部位過重，判定為壞交易。";
+          ratingBadgeClass = "bg-red-950/40 border border-loss/30 text-loss";
+          ratingEmoji = "🔴";
+        } else if (!isClosed) {
+          if (isEmotional) {
+            computedRating = "🔴壞交易";
+            ratingReason = "【違反框架】目前仍在持倉中，但建倉時伴隨非理性的【" + mentalState + "】心態。屬於高風險之壞交易。";
+            ratingBadgeClass = "bg-red-950/40 border border-loss/30 text-loss";
+            ratingEmoji = "🔴";
+          } else {
+            computedRating = "🟢好交易";
+            ratingReason = "【持倉觀察中】身心冷靜、紀律完好。請日後落實停利停損，唯有依計劃平倉才是一筆完整的好交易。";
+            ratingBadgeClass = "bg-blue-950/40 border border-blue-500/30 text-blue-300";
+            ratingEmoji = "⏳";
+          }
+        }
+
+        // Apply automatic judgment to the hidden rating input
+        document.getElementById('trade-rating').value = computedRating;
+
+        // Render to dynamic evaluation panel
+        const ratingContainer = document.getElementById('system-rating-container');
+        if (ratingContainer) {
+          ratingContainer.innerHTML = `
+            <div class="flex items-start gap-3.5 p-1 text-left">
+              <span class="text-3xl select-none leading-none">${ratingEmoji}</span>
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-400 font-bold">判定結果：</span>
+                  <span class="px-2.5 py-0.5 rounded-md text-xs font-bold ${ratingBadgeClass}">${computedRating}</span>
+                </div>
+                <p class="text-xs text-gray-300 font-normal leading-relaxed">${ratingReason}</p>
+              </div>
+            </div>
+          `;
+        }
+
+        const warningBanner = document.getElementById('form-warning-banner');
+        if (warningBanner) {
+          if (computedRating === '🔴壞交易') {
+            warningBanner.classList.remove('hidden');
+          } else {
+            warningBanner.classList.add('hidden');
           }
         }
       }
@@ -2145,8 +2205,8 @@
             trRow.setAttribute('onclick', `toggleAccordion('${tr.id}')`);
 
             const dateStr = isClosed 
-              ? `${tr.entryDate.substring(5)} → ${tr.exitDate.substring(5)}`
-              : `${tr.entryDate.substring(5)} → <span class="text-warning font-sans inline-flex items-center gap-0.5 animate-pulse font-bold text-[10px] bg-warning/15 border border-warning/35 px-1 rounded shadow-sm"><span class="h-1 w-1 bg-warning rounded-full"></span>持倉⏳</span>`;
+              ? `<span class="text-emerald-400 font-semibold bg-emerald-950/20 border border-emerald-500/20 px-1 py-0.5 rounded font-mono" title="建倉日: ${tr.entryDate}">建:${tr.entryDate.substring(5)}</span><span class="text-gray-600 px-1">→</span><span class="text-fuchsia-400 font-semibold bg-fuchsia-950/20 border border-fuchsia-500/20 px-1 py-0.5 rounded font-mono" title="平倉日: ${tr.exitDate}">平:${tr.exitDate.substring(5)}</span>`
+              : `<span class="text-emerald-400 font-semibold bg-emerald-950/20 border border-emerald-500/20 px-1 py-0.5 rounded font-mono" title="建倉日: ${tr.entryDate}">建:${tr.entryDate.substring(5)}</span><span class="text-gray-600 px-1">→</span><span class="text-warning font-sans inline-flex items-center gap-0.5 animate-pulse font-bold text-[10px] bg-warning/15 border border-warning/35 px-1 py-0.5 rounded shadow-sm"><span class="h-1 w-1 bg-warning rounded-full"></span>持倉⏳</span>`;
 
             const exitPriceStr = isClosed ? tr.exitPrice.toFixed(1) : `<span class="text-warning text-xs select-none">⌛ 持倉</span>`;
 
