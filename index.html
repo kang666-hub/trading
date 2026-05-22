@@ -468,6 +468,7 @@
                       <option value="[A-1] 箱體突破 / 創歷史新高">[A-1] 箱體突破 / 創歷史新高</option>
                       <option value="[A-2] 大單打路後回測量能真空區">[A-2] 大單打路後回測量能真空區</option>
                       <option value="[A-3] KAMA系統異常量能發動">[A-3] KAMA系統異常量能發動</option>
+                      <option value="[A-5] 原部位轉倉">[A-5] 原部位轉倉</option>
                       <option value="[A-4] 酒精衝動 / 怕買不到追高（檢討用）">[A-4] 酒精衝動 / 怕買不到追高（檢討用）</option>
                     </select>
                   </div>
@@ -2449,21 +2450,21 @@
           cell.setAttribute('onclick', `filterDateFromCalendar('${dateString}')`);
 
           // Determine styles
-          let baseClasses = "flex flex-col items-center justify-center p-1 relative rounded-lg min-h-[36px] transition-all duration-150 cursor-pointer text-[10.5px] border select-none ";
+          let baseClasses = "flex flex-col items-center justify-center p-1 relative rounded-lg min-h-[38px] transition-all duration-150 cursor-pointer text-[10.5px] border select-none ";
           let stateClasses = "bg-terminal-bg/30 text-gray-400 border-terminal-accent/10 hover:bg-terminal-accent/30 hover:text-white ";
 
           if (dayTradesCount > 0) {
             if (dayNetPnL > 0) {
-              stateClasses = "bg-profit/10 hover:bg-profit/25 text-profit border-profit/30 font-bold ";
+              stateClasses = "bg-[#0b2d18]/90 border-[#10b981] hover:bg-[#114a26] text-white font-bold ring-1 ring-[#10b981]/30 shadow-[0_0_10px_rgba(16,185,129,0.3)] scale-[1.02] ";
             } else if (dayNetPnL < 0) {
-              stateClasses = "bg-loss/10 hover:bg-loss/25 text-loss border-loss/30 font-bold ";
+              stateClasses = "bg-[#3e1315]/90 border-[#f43f5e] hover:bg-[#5c1c20] text-white font-bold ring-1 ring-[#f43f5e]/30 shadow-[0_0_10px_rgba(244,63,94,0.3)] scale-[1.02] ";
             } else {
-              stateClasses = "bg-gray-800/40 hover:bg-gray-800/70 text-gray-300 border-gray-600/30 font-semibold ";
+              stateClasses = "bg-slate-800/90 border-[#94a3b8] hover:bg-[#334155] text-white font-bold ring-1 ring-[#94a3b8]/30 shadow-[0_0_8px_rgba(148,163,184,0.25)] scale-[1.02] ";
             }
           }
 
           if (isSelected) {
-            stateClasses = "bg-blue-950/40 text-blue-300 border-blue-500 font-bold ring-1 ring-blue-500/50 shadow-[0_0_8px_rgba(59,130,246,0.25)] ";
+            stateClasses = "bg-blue-900/80 text-white border-blue-400 font-extrabold ring-2 ring-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.55)] scale-[1.05] z-10 ";
           }
 
           cell.className = baseClasses + stateClasses;
@@ -2474,7 +2475,7 @@
           // Show small value if there are trades
           if (dayTradesCount > 0) {
             const displayPnL = formatBriefPnl(dayNetPnL);
-            const textCol = dayNetPnL > 0 ? "text-[8px] text-profit font-mono leading-none mt-0.5" : (dayNetPnL < 0 ? "text-[8px] text-loss font-mono leading-none mt-0.5" : "text-[8px] text-gray-400 font-mono leading-none mt-0.5");
+            const textCol = dayNetPnL > 0 ? "text-[8.5px] text-[#10b981] font-mono leading-none mt-1 font-bold" : (dayNetPnL < 0 ? "text-[8.5px] text-[#f43f5e] font-mono leading-none mt-1 font-bold" : "text-[8.5px] text-gray-300 font-mono leading-none mt-1 font-bold");
             cellHtml += `<span class="${textCol}">${displayPnL}</span>`;
           }
 
