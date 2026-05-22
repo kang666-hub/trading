@@ -6,6 +6,8 @@
     <title>個股期貨動能交易日誌</title>
     <!-- Tailwind CSS v4 Browser CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- html2pdf.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -221,6 +223,21 @@
 
         <!-- TAB 1: 📊 儀表板 -->
         <div id="tab-dashboard" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- Dashboard Control Header -->
+          <div class="lg:col-span-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-terminal-card border border-terminal-accent/70 px-5 py-4 rounded-xl shadow-md">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span>📊</span> 交易績效數據中心
+              </h2>
+              <p class="text-[11px] text-gray-400 mt-1">整合動能勝率、期望值核心指標與身心狀態之全方位洞察</p>
+            </div>
+            <!-- Export Monthly PDF Report -->
+            <button onclick="exportDashboardToPDF()" class="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#2ebd6f]/30 via-[#314158]/30 to-[#1b2234]/30 border border-[#2ebd6f]/50 hover:border-[#2ebd6f] text-[#2ebd6f] hover:text-white rounded-lg text-xs font-bold cursor-pointer transition-all select-none shadow hover:shadow-[#2ebd6f]/20 active:scale-95">
+              <span>📄</span> 匯出 PDF 績效月報
+            </button>
+          </div>
+
           <div class="lg:col-span-2 space-y-6">
             <!-- Asset Chart Mini -->
             <div class="bg-terminal-card rounded-xl border border-terminal-accent p-5 flex flex-col h-72 md:h-80 shadow-md">
@@ -298,6 +315,16 @@
                 <button onclick="switchTab('new-trade')" class="w-full py-3 bg-profit hover:bg-profit/90 active:scale-[0.98] rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-white cursor-pointer select-none text-sm">
                   <span>🚀</span> 快速新增交易
                 </button>
+              </div>
+            </div>
+
+            <!-- 身心狀態分佈 -->
+            <div class="bg-terminal-card rounded-xl border border-terminal-accent p-5 flex flex-col h-80 shadow-md">
+              <h3 class="font-bold mb-3 flex items-center gap-2 text-white">
+                <span>🧠</span> 身心狀態分佈
+              </h3>
+              <div class="flex-1 relative min-h-0 flex items-center justify-center justify-items-center">
+                <canvas id="mental-state-chart"></canvas>
               </div>
             </div>
 
@@ -487,8 +514,13 @@
                 </div>
 
                 <!-- Notes -->
-                <div class="md:col-span-2">
-                  <label class="block text-xs text-gray-400 font-medium mb-1.5">覆盤備註與思維檢討</label>
+                <div class="md:col-span-2 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-xs text-gray-400 font-medium font-sans">覆盤備註與思維檢討</label>
+                    <button type="button" id="btn-ai-review" onclick="triggerAiReview()" class="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-indigo-900/40 border border-purple-500/50 hover:border-purple-400 text-purple-200 hover:text-white rounded-lg text-xs font-semibold cursor-pointer transition-all select-none shadow">
+                      <span>✨ AI 智能覆盤</span>
+                    </button>
+                  </div>
                   <textarea id="trade-note" rows="3" placeholder="請抒寫交易時的情緒、支撐壓力位置、量能變化或任何能讓你精進的檢討點..." class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-3 py-2 text-sm text-white focus:outline-none placeholder-gray-600 leading-relaxed"></textarea>
                 </div>
 
@@ -523,6 +555,17 @@
                   </div>
 
                 </div>
+
+                <!-- 模擬期望值貢獻度文字 -->
+                <div class="mt-4 pt-3.5 border-t border-terminal-accent/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-sans">
+                  <span class="text-gray-400 font-medium flex items-center gap-1 shrink-0">
+                    <span>💡</span> 
+                    <span>模擬期望值貢獻度：</span>
+                  </span>
+                  <span id="calc-expectancy-contribution" class="font-mono text-gray-500 text-right leading-relaxed">
+                    請填寫進出場價與口數以開始分析期望值貢獻度...
+                  </span>
+                </div>
               </div>
 
               <!-- Button actions -->
@@ -541,77 +584,137 @@
 
         <!-- TAB 3: 📋 交易記錄 -->
         <div id="tab-log" class="tab-content hidden space-y-6">
-          <!-- Control Panel -->
-          <div class="bg-terminal-card border border-terminal-accent rounded-xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             
-            <!-- Filter buttons -->
-            <div class="flex flex-wrap gap-2" id="log-filter-buttons">
-              <button onclick="setLogFilter('全部')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all">全部</button>
-              <button onclick="setLogFilter('🟢好交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🟢 好交易</button>
-              <button onclick="setLogFilter('🔴壞交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🔴 壞交易</button>
-              <button onclick="setLogFilter('獲利')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">獲利</button>
-              <button onclick="setLogFilter('虧損')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">虧損</button>
-            </div>
-
-            <!-- Search and Sort and Actions -->
-            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
-              <!-- Search -->
-              <div class="relative flex-1 sm:w-48">
-                <span class="absolute left-3 top-2.5 text-xs select-none text-gray-500">🔍</span>
-                <input type="text" id="log-search-input" oninput="triggerLogSearch(this.value)" placeholder="搜尋代號/名稱..." class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none placeholder-gray-600">
+            <!-- Left Side: Trading Reflection Calendar -->
+            <div class="lg:col-span-1 bg-terminal-card border border-terminal-accent rounded-xl p-4 shadow-lg flex flex-col space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-xs flex items-center gap-1.5 text-white">
+                  <span>📅</span> 交易覆盤日曆
+                </h3>
+                <div class="flex gap-1.5">
+                  <button type="button" onclick="navigateCalendarMonth(-1)" class="w-6 h-6 flex items-center justify-center rounded bg-terminal-bg text-gray-400 hover:text-white hover:bg-terminal-accent/50 text-xs transition-colors cursor-pointer select-none">◀</button>
+                  <button type="button" onclick="navigateCalendarMonth(1)" class="w-6 h-6 flex items-center justify-center rounded bg-terminal-bg text-gray-400 hover:text-white hover:bg-terminal-accent/50 text-xs transition-colors cursor-pointer select-none">▶</button>
+                </div>
+              </div>
+              
+              <div class="flex items-center justify-between px-1">
+                <span id="calendar-month-year-label" class="text-xs font-bold text-white font-mono">2026年 5月</span>
+                <span id="calendar-month-stats-label" class="text-[9px] text-gray-400 font-mono">當月損益: $0</span>
               </div>
 
-              <!-- Sorting dropdown -->
-              <select id="log-sort-select" onchange="triggerLogSort(this.value)" class="bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none">
-                <option value="date-desc">日期最新優先</option>
-                <option value="date-asc">日期最早優先</option>
-                <option value="pnl-desc">獲利大小優先</option>
-                <option value="pnl-asc">虧損大小優先</option>
-              </select>
-
-              <!-- CSV Export Action -->
-              <button onclick="exportTradesToCSV()" class="px-3.5 py-1.5 bg-terminal-accent hover:bg-terminal-accent/80 text-white border border-terminal-accent/60 rounded-lg text-xs font-semibold select-none flex items-center justify-center gap-1.5 cursor-pointer hover:border-profit transition-all">
-                📤 匯出 CSV
-              </button>
-            </div>
-
-          </div>
-
-          <!-- Trade table card -->
-          <div class="bg-terminal-card border border-terminal-accent rounded-xl shadow-lg overflow-hidden">
-            <div class="overflow-x-auto min-h-64">
-              <table class="w-full text-left text-sm whitespace-nowrap">
-                <thead class="text-xs text-gray-400 uppercase bg-terminal-bg/50 border-b border-terminal-accent/30 font-mono">
-                  <tr>
-                    <th class="w-6 px-4 py-3"></th>
-                    <th class="px-4 py-3 font-semibold">日期</th>
-                    <th class="px-4 py-3 font-semibold">商品資訊</th>
-                    <th class="px-4 py-3 font-semibold">型態/口數</th>
-                    <th class="px-4 py-3 font-semibold">屬性</th>
-                    <th class="px-4 py-3 font-semibold text-right">進場價</th>
-                    <th class="px-4 py-3 font-semibold text-right">出場價</th>
-                    <th class="px-4 py-3 font-semibold text-right">淨損益 (NTD)</th>
-                    <th class="px-4 py-3 font-semibold text-center">評等/狀態</th>
-                    <th class="px-4 py-3 w-12 text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody id="log-trades-body" class="divide-y divide-terminal-accent/30 font-medium">
-                  <!-- Dynamic generated list -->
-                </tbody>
-              </table>
-
-              <!-- Empty state view -->
-              <div id="log-empty-state" class="hidden flex flex-col items-center justify-center py-16 px-4 max-w-sm mx-auto text-center">
-                <div class="text-4xl mb-4 select-none">🍂</div>
-                <h4 class="text-base font-bold text-gray-300">無符合條件的記錄</h4>
-                <p class="text-xs text-gray-500 mt-2 leading-relaxed" id="empty-motivational-text">
-                  還沒有交易記錄。點擊「新增交易」開始你的第一筆覆盤。
-                </p>
-                <button onclick="switchTab('new-trade')" class="mt-4 px-4 py-2 bg-profit text-white hover:bg-profit/90 text-xs font-bold rounded-lg transition-all shadow-md">
-                  立即新增交易覆盤
-                </button>
+              <!-- Calendar Grid Wrapper -->
+              <div class="grid grid-cols-7 gap-1 text-center text-[10px] grid-rows-1">
+                <!-- Week labels -->
+                <div class="py-1 text-gray-500 font-bold font-mono">日</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">一</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">二</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">三</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">四</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">五</div>
+                <div class="py-1 text-gray-500 font-bold font-mono">六</div>
+              </div>
+              <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                <!-- Days injected dynamically -->
+              </div>
+              
+              <!-- Quick Help/Legend -->
+              <div class="pt-2.5 border-t border-terminal-accent/30 flex flex-col gap-1.5 text-[9px] text-gray-500 leading-normal">
+                <div class="flex justify-between items-center">
+                  <div class="flex gap-2 font-medium">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-profit/30 border border-profit/50 block"></span>獲利日</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-loss/30 border border-loss/50 block"></span>虧損日</span>
+                  </div>
+                  <div>點擊日期篩選當天</div>
+                </div>
               </div>
             </div>
+
+            <!-- Right Side: Existing Filters & List Content -->
+            <div class="lg:col-span-3 space-y-4">
+              <!-- Active Date Filter Indicator Banner -->
+              <div id="log-date-filter-banner" class="hidden flex items-center justify-between bg-blue-950/20 border border-blue-500/30 rounded-xl py-2.5 px-4 text-xs text-blue-300 transition-all">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm">📅</span>
+                  <span>正在顯示 <strong id="log-filtered-date-text" class="font-mono text-white text-sm">2026-05-22</strong> 的交易記錄</span>
+                </div>
+                <button type="button" onclick="clearDateFilter()" class="px-2.5 py-1 bg-blue-800/40 hover:bg-blue-800/70 border border-blue-500/20 text-[10px] rounded-lg font-bold cursor-pointer transition-colors text-white">清除篩選</button>
+              </div>
+
+              <!-- Control Panel -->
+              <div class="bg-terminal-card border border-terminal-accent rounded-xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+                
+                <!-- Filter buttons -->
+                <div class="flex flex-wrap gap-2" id="log-filter-buttons">
+                  <button onclick="setLogFilter('全部')" class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all">全部</button>
+                  <button onclick="setLogFilter('🟢好交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🟢 好交易</button>
+                  <button onclick="setLogFilter('🔴壞交易')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">🔴 壞交易</button>
+                  <button onclick="setLogFilter('獲利')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">獲利</button>
+                  <button onclick="setLogFilter('虧損')" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all">虧損</button>
+                </div>
+
+                <!-- Search and Sort and Actions -->
+                <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full md:w-auto">
+                  <!-- Search -->
+                  <div class="relative flex-1 sm:w-48">
+                    <span class="absolute left-3 top-2.5 text-xs select-none text-gray-500">🔍</span>
+                    <input type="text" id="log-search-input" oninput="triggerLogSearch(this.value)" placeholder="搜尋代號/名稱..." class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none placeholder-gray-600">
+                  </div>
+
+                  <!-- Sorting dropdown -->
+                  <select id="log-sort-select" onchange="triggerLogSort(this.value)" class="bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none">
+                    <option value="date-desc">日期最新優先</option>
+                    <option value="date-asc">日期最早優先</option>
+                    <option value="pnl-desc">獲利大小優先</option>
+                    <option value="pnl-asc">虧損大小優先</option>
+                  </select>
+
+                  <!-- CSV Export Action -->
+                  <button onclick="exportTradesToCSV()" class="px-3.5 py-1.5 bg-terminal-accent hover:bg-terminal-accent/80 text-white border border-terminal-accent/60 rounded-lg text-xs font-semibold select-none flex items-center justify-center gap-1.5 cursor-pointer hover:border-profit transition-all">
+                    📤 匯出 CSV
+                  </button>
+                </div>
+
+              </div>
+
+              <!-- Trade table card -->
+              <div class="bg-terminal-card border border-terminal-accent rounded-xl shadow-lg overflow-hidden">
+                <div class="overflow-x-auto min-h-64">
+                  <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead class="text-xs text-gray-400 uppercase bg-terminal-bg/50 border-b border-terminal-accent/30 font-mono">
+                      <tr>
+                        <th class="w-6 px-4 py-3"></th>
+                        <th class="px-4 py-3 font-semibold">日期</th>
+                        <th class="px-4 py-3 font-semibold">商品資訊</th>
+                        <th class="px-4 py-3 font-semibold">型態/口數</th>
+                        <th class="px-4 py-3 font-semibold">屬性</th>
+                        <th class="px-4 py-3 font-semibold text-right">進場價</th>
+                        <th class="px-4 py-3 font-semibold text-right">出場價</th>
+                        <th class="px-4 py-3 font-semibold text-right">淨損益 (NTD)</th>
+                        <th class="px-4 py-3 font-semibold text-center">評等/狀態</th>
+                        <th class="px-4 py-3 w-12 text-center">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="log-trades-body" class="divide-y divide-terminal-accent/30 font-medium">
+                      <!-- Dynamic generated list -->
+                    </tbody>
+                  </table>
+
+                  <!-- Empty state view -->
+                  <div id="log-empty-state" class="hidden flex flex-col items-center justify-center py-16 px-4 max-w-sm mx-auto text-center">
+                    <div class="text-4xl mb-4 select-none">🍂</div>
+                    <h4 class="text-base font-bold text-gray-300">無符合條件的記錄</h4>
+                    <p class="text-xs text-gray-500 mt-2 leading-relaxed" id="empty-motivational-text">
+                      還沒有交易記錄。點擊「新增交易」開始你的第一筆覆盤。
+                    </p>
+                    <button onclick="switchTab('new-trade')" class="mt-4 px-4 py-2 bg-profit text-white hover:bg-profit/90 text-xs font-bold rounded-lg transition-all shadow-md">
+                      立即新增交易覆盤
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -893,9 +996,13 @@
         logFilter: '全部',
         logSearch: '',
         logSort: 'date-desc',
+        logSelectedDate: null,
+        calendarYear: new Date().getFullYear(),
+        calendarMonth: new Date().getMonth(),
         charts: {
           mini: null,
-          large: null
+          large: null,
+          mental: null
         }
       };
 
@@ -1271,6 +1378,8 @@
 
         // Mini chart rendering
         renderMiniChart();
+        // Mental state chart rendering
+        renderMentalChart();
       }
 
       function renderMiniChart() {
@@ -1330,6 +1439,122 @@
               y: {
                 grid: { color: 'rgba(31, 56, 100, 0.15)' },
                 ticks: { color: '#6B7280', font: { size: 9, family: 'JetBrains Mono' }, callback: (v) => '$' + v.toLocaleString() }
+              }
+            }
+          }
+        });
+      }
+
+      function renderMentalChart() {
+        const ctx = document.getElementById('mental-state-chart').getContext('2d');
+        if (state.charts.mental) {
+          state.charts.mental.destroy();
+        }
+
+        // Aggregate mental states counts
+        const counts = {
+          '冷靜執行': 0,
+          '沒睡飽': 0,
+          '情緒波動': 0,
+          '不理性衝動': 0,
+          '壓力過大': 0
+        };
+
+        let total = 0;
+        state.trades.forEach(tr => {
+          const stateVal = tr.mentalState || '冷靜執行';
+          if (counts[stateVal] !== undefined) {
+            counts[stateVal]++;
+          } else {
+            counts[stateVal] = 1;
+          }
+          total++;
+        });
+
+        // Slice categories dynamically based on present counts to match modern presentation
+        const labels = Object.keys(counts);
+        const data = Object.values(counts);
+        const bgColors = [
+          '#2ebd6f', // 冷靜執行 (Emerald Green)
+          '#5c7294', // 沒睡飽 (Cool Steel Gray)
+          '#f59e0b', // 情緒波動 (Vibrant Orange)
+          '#f25f5f', // 不理性衝動 (Vibrant Rose Red)
+          '#a855f7'  // 壓力過大 (Vibrant Purple)
+        ];
+
+        if (total === 0) {
+          // Empty state placeholder
+          state.charts.mental = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['尚無資料'],
+              datasets: [{
+                data: [1],
+                backgroundColor: ['#28354c'],
+                borderWidth: 2,
+                borderColor: '#1b2234'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    color: '#94a3b8',
+                    boxWidth: 8,
+                    font: { size: 10, family: 'JetBrains Mono' }
+                  }
+                },
+                tooltip: { enabled: false }
+              },
+              cutout: '70%'
+            }
+          });
+          return;
+        }
+
+        state.charts.mental = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: labels.map(lbl => `${lbl} (${counts[lbl]}筆)`),
+            datasets: [{
+              data: data,
+              backgroundColor: bgColors,
+              borderWidth: 2,
+              borderColor: '#1b2234',
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                align: 'center',
+                labels: {
+                  color: '#e2e8f0',
+                  boxWidth: 10,
+                  font: { size: 9, family: 'sans-serif' },
+                  padding: 8
+                }
+              },
+              tooltip: {
+                backgroundColor: '#111622',
+                titleColor: '#ffffff',
+                bodyColor: '#e2e8f0',
+                borderColor: '#4a5d78',
+                borderWidth: 1,
+                padding: 10,
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    const pct = ((value / total) * 100).toFixed(1);
+                    return ` ${context.label.split(' ')[0]}: ${value} 筆 (${pct}%)`;
+                  }
+                }
               }
             }
           }
@@ -1439,6 +1664,67 @@
           pctEl.className = "text-base font-bold text-gray-300";
           targetIcon.innerText = "";
         }
+
+        // Dynamically compute simulated expectancy contribution
+        const contributionEl = document.getElementById('calc-expectancy-contribution');
+        if (contributionEl) {
+          if (entryPrice === 0 || exitPrice === 0) {
+            contributionEl.innerHTML = `<span class="text-gray-500 font-medium">請填寫進出場價以開始模擬分析...</span>`;
+          } else {
+            // Include this speculative/simulated trade into our trades list
+            const simulatedTrade = {
+              netPnL: netPnL,
+            };
+            const simTrades = [...state.trades, simulatedTrade];
+            
+            let simCount = simTrades.length;
+            let simWinCount = 0;
+            let simLossCount = 0;
+            let simWinSum = 0;
+            let simLossSum = 0;
+
+            simTrades.forEach(tr => {
+              const val = Number(tr.netPnL) || 0;
+              if (val > 0) {
+                simWinCount++;
+                simWinSum += val;
+              } else if (val < 0) {
+                simLossCount++;
+                simLossSum += val;
+              }
+            });
+
+            const simWinRate = simCount > 0 ? (simWinCount / simCount) : 0;
+            const simAvgProfit = simWinCount > 0 ? (simWinSum / simWinCount) : 0;
+            const simAvgLoss = simLossCount > 0 ? (simLossSum / simLossCount) : 0;
+            // E = winRate * AvgProfit + (1 - winRate) * AvgLoss
+            const simExpectedValue = (simWinRate * simAvgProfit) + ((1 - simWinRate) * simAvgLoss);
+
+            const origExpectedValue = statsCache.expectedValue || 0;
+            const diff = simExpectedValue - origExpectedValue;
+
+            if (state.trades.length === 0) {
+              const displayVal = (netPnL >= 0 ? "+$" : "-$") + formatNumber(Math.abs(netPnL));
+              const colorClass = netPnL > 0 ? "text-profit font-bold" : (netPnL < 0 ? "text-loss font-bold" : "text-gray-400");
+              contributionEl.innerHTML = `📊 首筆交易，將直接奠定您的初始期望值為 <span class="${colorClass}">${displayVal}</span>`;
+            } else {
+              let text = "";
+              let colorClass = "";
+              // Due to rounding or float precision, check for non-trivial difference
+              if (diff > 0.01) {
+                text = `📈 預估期望值將由 ${origExpectedValue.toFixed(2)} 提升至 ${simExpectedValue.toFixed(2)} (正向貢獻 +${diff.toFixed(2)})`;
+                colorClass = "text-profit font-bold";
+              } else if (diff < -0.01) {
+                text = `📉 預估期望值將由 ${origExpectedValue.toFixed(2)} 降至 ${simExpectedValue.toFixed(2)} (稀釋/扣分風險 ${diff.toFixed(2)})`;
+                colorClass = "text-loss font-bold";
+              } else {
+                text = `⚖️ 預估期望值維持在 ${simExpectedValue.toFixed(2)} 附近 (對整體期望值無重大改變)`;
+                colorClass = "text-gray-400 font-semibold";
+              }
+              contributionEl.innerHTML = `<span class="${colorClass}">${text}</span>`;
+            }
+          }
+        }
       }
 
       function clearTradeForm() {
@@ -1449,6 +1735,75 @@
         setPositionAttr('底倉');
         setRating('🟢好交易');
         updateFormCalculations();
+      }
+
+      async function triggerAiReview() {
+        const btn = document.getElementById('btn-ai-review');
+        if (!btn) return;
+
+        const originalHtml = btn.innerHTML;
+        
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ AI 撰寫中...</span>`;
+        btn.className = "flex items-center gap-1 px-3 py-1 bg-purple-900/60 border border-purple-400 text-purple-300 rounded-lg text-xs font-semibold cursor-not-allowed select-none animate-pulse";
+
+        const code = document.getElementById('trade-code').value.trim();
+        const name = document.getElementById('trade-name').value.trim();
+        const typeEl = document.querySelector('input[name="trade-type"]:checked');
+        const direction = typeEl ? typeEl.value : '多';
+        const quantity = parseInt(document.getElementById('trade-qty').value) || 1;
+        const entryPrice = parseFloat(document.getElementById('trade-entry-price').value) || 0;
+        const exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
+        const rating = document.getElementById('trade-rating').value;
+        const mentalState = document.getElementById('trade-mental-state').value;
+        const entryReason = document.getElementById('trade-entry-reason').value;
+        const exitReason = document.getElementById('trade-exit-reason').value;
+
+        try {
+          const response = await fetch("/api/ai/review", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              code,
+              name,
+              direction,
+              quantity,
+              entryPrice,
+              exitPrice,
+              rating,
+              mentalState,
+              entryReason,
+              exitReason
+            })
+          });
+
+          const data = await response.json();
+          if (response.ok && data.review) {
+            const noteTextarea = document.getElementById('trade-note');
+            
+            // Append or overwrite the review based on current value
+            if (noteTextarea.value.trim() !== '') {
+              noteTextarea.value = noteTextarea.value.trim() + "\n\n【AI 智能覆盤建議】\n" + data.review;
+            } else {
+              noteTextarea.value = data.review;
+            }
+            
+            noteTextarea.focus();
+            alert("✨ AI 智能覆盤分析成功！已填入備註欄內。");
+          } else {
+            alert("❌ AI 覆盤失敗：" + (data.error || "無特定錯誤訊息。"));
+          }
+        } catch (error) {
+          console.error("AI Review error:", error);
+          alert("❌ AI 智能覆盤連線出錯，請確認後端伺服器運作正常與 API 金鑰狀態。");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+          btn.className = "flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-indigo-900/40 border border-purple-500/50 hover:border-purple-400 text-purple-200 hover:text-white rounded-lg text-xs font-semibold cursor-pointer transition-all select-none shadow";
+        }
       }
 
       function saveTrade(event) {
@@ -1476,6 +1831,19 @@
 
         const grossPnL = (exitPrice - entryPrice) * qty * pointValue;
         const netPnL = grossPnL - fee;
+
+        const ratingVal = document.getElementById('trade-rating').value;
+        const initialCapital = Number(state.settings.initialCapital) || 500000;
+        const fivePercentOfCapital = initialCapital * 0.05;
+
+        if (ratingVal === '🔴壞交易' && netPnL < 0 && Math.abs(netPnL) > fivePercentOfCapital) {
+          const userConfirmed = confirm("⚠️ 此筆損失已達高風險水準，請務必於備註中詳細說明停損未執行的原因。\n\n確定要立即儲存此筆交易嗎？");
+          if (!userConfirmed) {
+            // Guide focus to reflection note for compliance
+            document.getElementById('trade-note').focus();
+            return;
+          }
+        }
 
         const newObj = {
           id: Date.now().toString(),
@@ -1539,10 +1907,24 @@
       function renderLog() {
         const body = document.getElementById('log-trades-body');
         const emptyState = document.getElementById('log-empty-state');
+        const dateFilterBanner = document.getElementById('log-date-filter-banner');
         body.innerHTML = '';
+
+        // Update active date banner indicators
+        if (state.logSelectedDate) {
+          dateFilterBanner.classList.remove('hidden');
+          document.getElementById('log-filtered-date-text').innerText = state.logSelectedDate;
+        } else {
+          dateFilterBanner.classList.add('hidden');
+        }
 
         // Filter and Search logic
         let processed = [...state.trades];
+
+        // Calendar selected date filter
+        if (state.logSelectedDate) {
+          processed = processed.filter(tr => tr.entryDate === state.logSelectedDate);
+        }
 
         // Search code & name
         if (state.logSearch) {
@@ -1660,6 +2042,151 @@
             `;
             body.appendChild(trDetail);
           });
+        }
+
+        // Render calendar view reactively
+        if (document.getElementById('calendar-days-grid')) {
+          renderCalendar();
+        }
+      }
+
+      function navigateCalendarMonth(direction) {
+        state.calendarMonth += direction;
+        if (state.calendarMonth < 0) {
+          state.calendarMonth = 11;
+          state.calendarYear--;
+        } else if (state.calendarMonth > 11) {
+          state.calendarMonth = 0;
+          state.calendarYear++;
+        }
+        renderCalendar();
+      }
+
+      function clearDateFilter() {
+        state.logSelectedDate = null;
+        renderLog();
+      }
+
+      function filterDateFromCalendar(dateString) {
+        if (state.logSelectedDate === dateString) {
+          state.logSelectedDate = null; // Toggle off if clicked again
+        } else {
+          state.logSelectedDate = dateString;
+        }
+        renderLog();
+      }
+
+      function formatBriefPnl(num) {
+        if (num === 0) return "0";
+        const abs = Math.abs(num);
+        const sign = num > 0 ? "+" : "-";
+        
+        // Use K/M suffixes or shorten
+        if (abs >= 1000000) {
+          return `${sign}${(abs / 1000000).toFixed(1)}M`;
+        } else if (abs >= 1000) {
+          return `${sign}${(abs / 1000).toFixed(0)}K`;
+        } else {
+          return `${sign}${abs}`;
+        }
+      }
+
+      function renderCalendar() {
+        const grid = document.getElementById('calendar-days-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const year = state.calendarYear;
+        const month = state.calendarMonth;
+
+        const zhMonths = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+        document.getElementById('calendar-month-year-label').innerText = `${year}年 ${zhMonths[month]}`;
+
+        // Get weekday of first day of month (0-indexed: Sunday = 0 etc)
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        // Number of days in month
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Calculate and aggregate overall stats for this specific Month
+        let monthlyNet = 0;
+        let monthTradesCount = 0;
+        const monthStrPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+        state.trades.forEach(tr => {
+          if (tr.entryDate && tr.entryDate.startsWith(monthStrPrefix)) {
+            monthlyNet += Number(tr.netPnL) || 0;
+            monthTradesCount++;
+          }
+        });
+
+        const statsLabel = document.getElementById('calendar-month-stats-label');
+        if (statsLabel) {
+          const sign = monthlyNet > 0 ? "+$" : (monthlyNet < 0 ? "-$" : "$");
+          const colorClass = monthlyNet > 0 ? "text-profit font-bold" : (monthlyNet < 0 ? "text-loss font-bold" : "text-gray-400");
+          statsLabel.innerHTML = `當月損益: <span class="${colorClass}">${sign}${formatNumber(Math.abs(monthlyNet))}</span> (${monthTradesCount}筆)`;
+        }
+
+        // Render leading blanks (empty blocks padding)
+        for (let i = 0; i < firstDayIndex; i++) {
+          const emptyCell = document.createElement('div');
+          emptyCell.className = "py-1 opacity-0 pointer-events-none";
+          grid.appendChild(emptyCell);
+        }
+
+        // Render each day cell
+        for (let day = 1; day <= daysInMonth; day++) {
+          const paddedDay = String(day).padStart(2, '0');
+          const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${paddedDay}`;
+
+          // Find trades on this day
+          const dayTrades = state.trades.filter(tr => tr.entryDate === dateString);
+          const dayTradesCount = dayTrades.length;
+          
+          let dayNetPnL = 0;
+          if (dayTradesCount > 0) {
+            dayTrades.forEach(tr => {
+              dayNetPnL += Number(tr.netPnL) || 0;
+            });
+          }
+
+          const isSelected = state.logSelectedDate === dateString;
+
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.setAttribute('onclick', `filterDateFromCalendar('${dateString}')`);
+
+          // Determine styles
+          let baseClasses = "flex flex-col items-center justify-center p-1 relative rounded-lg min-h-[36px] transition-all duration-150 cursor-pointer text-[10.5px] border select-none ";
+          let stateClasses = "bg-terminal-bg/30 text-gray-400 border-terminal-accent/10 hover:bg-terminal-accent/30 hover:text-white ";
+
+          if (dayTradesCount > 0) {
+            if (dayNetPnL > 0) {
+              stateClasses = "bg-profit/10 hover:bg-profit/25 text-profit border-profit/30 font-bold ";
+            } else if (dayNetPnL < 0) {
+              stateClasses = "bg-loss/10 hover:bg-loss/25 text-loss border-loss/30 font-bold ";
+            } else {
+              stateClasses = "bg-gray-800/40 hover:bg-gray-800/70 text-gray-300 border-gray-600/30 font-semibold ";
+            }
+          }
+
+          if (isSelected) {
+            stateClasses = "bg-blue-950/40 text-blue-300 border-blue-500 font-bold ring-1 ring-blue-500/50 shadow-[0_0_8px_rgba(59,130,246,0.25)] ";
+          }
+
+          cell.className = baseClasses + stateClasses;
+          
+          // Day number
+          let cellHtml = `<span class="text-xs font-mono font-bold">${day}</span>`;
+          
+          // Show small value if there are trades
+          if (dayTradesCount > 0) {
+            const displayPnL = formatBriefPnl(dayNetPnL);
+            const textCol = dayNetPnL > 0 ? "text-[8px] text-profit font-mono leading-none mt-0.5" : (dayNetPnL < 0 ? "text-[8px] text-loss font-mono leading-none mt-0.5" : "text-[8px] text-gray-400 font-mono leading-none mt-0.5");
+            cellHtml += `<span class="${textCol}">${displayPnL}</span>`;
+          }
+
+          cell.innerHTML = cellHtml;
+          grid.appendChild(cell);
         }
       }
 
@@ -1993,6 +2520,202 @@
             renderDashboard();
             alert("💥 資料已完全清空，並回復為展示範例交易明細。你可以依循動能框架重新出發！");
             switchTab('dashboard');
+          }
+        }
+      }
+
+      async function exportDashboardToPDF() {
+        const miniChartCanvas = document.getElementById('mini-equity-chart');
+        const mentalChartCanvas = document.getElementById('mental-state-chart');
+
+        if (!miniChartCanvas || !mentalChartCanvas) {
+          alert("❌ 找不到儀表板圖表，請重試！");
+          return;
+        }
+
+        if (typeof html2pdf === "undefined") {
+          alert("❌ PDF 匯出組件尚未完全載入，請於 3 秒後重新點擊！");
+          return;
+        }
+
+        // Identify the triggering button
+        let btn = document.querySelector('button[onclick="exportDashboardToPDF()"]');
+        let originalHtml = btn ? btn.innerHTML : "";
+        if (btn) {
+          btn.innerHTML = `<span>⏳ 正在編製 PDF 月報...</span>`;
+          btn.disabled = true;
+          btn.style.opacity = "0.7";
+        }
+
+        try {
+          const miniImageUrl = miniChartCanvas.toDataURL('image/png');
+          const mentalImageUrl = mentalChartCanvas.toDataURL('image/png');
+
+          const reportDiv = document.createElement('div');
+          reportDiv.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          reportDiv.style.color = "#121824";
+          reportDiv.style.backgroundColor = "#ffffff";
+          reportDiv.style.padding = "40px";
+          reportDiv.style.width = "780px";
+          reportDiv.style.position = "absolute";
+          reportDiv.style.left = "-9999px";
+          reportDiv.style.top = "0px";
+          reportDiv.style.boxSizing = "border-box";
+
+          const recentTrades = [...state.trades]
+            .sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate) || Number(b.id) - Number(a.id))
+            .slice(0, 5);
+
+          let tableRowsHtml = "";
+          if (recentTrades.length === 0) {
+            tableRowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 15px; color: #888; font-size: 11px;">尚無交易覆盤記錄</td></tr>`;
+          } else {
+            recentTrades.forEach(tr => {
+              const trValue = Number(tr.netPnL) || 0;
+              const sign = trValue > 0 ? "+" : "";
+              const trColor = trValue > 0 ? "#2ebd6f" : (trValue < 0 ? "#f25f5f" : "#4a5568");
+              const ratingColor = tr.rating === '🟢好交易' ? '#2ebd6f' : '#f25f5f';
+
+              tableRowsHtml += `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 10px 8px; font-size: 11px; color: #4a5568; font-family: monospace;">${tr.entryDate.substring(5)}</td>
+                  <td style="padding: 10px 8px; font-size: 11px; color: #1a202c; font-weight: bold;">${tr.code} ${tr.name}</td>
+                  <td style="padding: 10px 8px; font-size: 11px; color: #4a5568;">${tr.type === '空' ? '空📉' : '多📈'} / ${tr.position}</td>
+                  <td style="padding: 10px 8px; font-size: 11px; color: #4a5568; text-align: right; font-family: monospace;">${tr.entryPrice.toFixed(1)} → ${tr.exitPrice.toFixed(1)}</td>
+                  <td style="padding: 10px 8px; font-size: 11px; color: ${trColor}; text-align: right; font-weight: bold; font-family: monospace;">${sign}${formatNumber(trValue)}</td>
+                  <td style="padding: 10px 8px; font-size: 10px; color: ${ratingColor}; text-align: center; font-weight: bold;">
+                    <span style="background-color: ${tr.rating === '🟢好交易' ? 'rgba(46,189,111,0.08)' : 'rgba(242,95,95,0.08)'}; padding: 2px 6px; border-radius: 4px;">
+                      ${tr.rating.substring(2)}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            });
+          }
+
+          const totalRated = statsCache.goodCount + statsCache.badCount;
+          const goodRatio = totalRated > 0 ? ((statsCache.goodCount / totalRated) * 100).toFixed(0) : "100";
+
+          reportDiv.innerHTML = `
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 25px;">
+              <div>
+                <div style="font-size: 20px; font-weight: 800; color: #0f172a;">個股期貨雙重框架 • 動能覆盤績效月報</div>
+                <div style="font-size: 9px; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-top: 2px;">MOMENTUM TRADING PERFORMANCE & DISCIPLINE REVIEW</div>
+              </div>
+              <div style="text-align: right; font-size: 11px; color: #475569; font-family: monospace;">
+                <div>報告日期：${getTodayDateString()}</div>
+                <div style="margin-top: 2px; font-weight: bold; color: #2ebd6f;">狀態：遵守紀律模式中 🟢</div>
+              </div>
+            </div>
+
+            <!-- KPI Cards Block -->
+            <table style="width: 100%; border-collapse: separate; border-spacing: 12px 0px; margin-left: -12px; margin-right: -12px; margin-bottom: 20px;">
+              <tr>
+                <td style="width: 33.33%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background-color: #f8fafc; vertical-align: top;">
+                  <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">帳戶財務淨值 / Equity</span>
+                  <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 5px; font-family: monospace;">$${formatNumber(statsCache.equity)}</div>
+                  <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: #64748b;">本期總盈虧:</span>
+                    <span style="font-weight: bold; color: ${statsCache.totalNetPnL >= 0 ? '#2ebd6f' : '#f25f5f'}; font-family: monospace;">
+                      ${statsCache.totalNetPnL >= 0 ? '+' : ''}$${formatNumber(statsCache.totalNetPnL)}
+                    </span>
+                  </div>
+                </td>
+                <td style="width: 33.33%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background-color: #f8fafc; vertical-align: top;">
+                  <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">阿魯米期望值系統 / Expectancy</span>
+                  <div style="font-size: 22px; font-weight: 800; color: #d97706; margin-top: 5px; font-family: monospace;">E = ${statsCache.expectedValue.toFixed(2)}</div>
+                  <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: #64748b;">交易勝率:</span>
+                    <span style="font-weight: bold; color: #0f172a; font-family: monospace;">${(statsCache.winRate * 100).toFixed(1)}%</span>
+                  </div>
+                </td>
+                <td style="width: 33.33%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background-color: #f8fafc; vertical-align: top;">
+                  <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">交易紀律與風控 / Discipline</span>
+                  <div style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 5px; font-family: monospace;">${goodRatio}% <span style="font-size: 12px; font-weight: normal; color: #64748b;">符合率</span></div>
+                  <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 11px;">
+                    <span style="color: #64748b;">最大回撤 (MDD):</span>
+                    <span style="font-weight: bold; color: #f25f5f; font-family: monospace;">-${statsCache.maxDrawdown.toFixed(1)}%</span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Dynamic Charts Render -->
+            <table style="width: 100%; border-collapse: separate; border-spacing: 12px 0px; margin-left: -12px; margin-right: -12px; margin-bottom: 25px;">
+              <tr>
+                <td style="width: 60%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; vertical-align: top;">
+                  <div style="font-size: 11px; font-weight: bold; color: #0f172a; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">📈 資產權益變動曲線 (Equity Growth)</div>
+                  <div style="height: 195px; text-align: center; background-color: #121824; border-radius: 8px; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                    <img src="${miniImageUrl}" style="max-height: 185px; max-width: 100%; object-fit: contain; margin: 0 auto; display: block;" />
+                  </div>
+                </td>
+                <td style="width: 40%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; vertical-align: top;">
+                  <div style="font-size: 11px; font-weight: bold; color: #0f172a; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">🧠 身心狀態分佈 (Mental State)</div>
+                  <div style="height: 195px; text-align: center; background-color: #121824; border-radius: 8px; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                    <img src="${mentalImageUrl}" style="max-height: 185px; max-width: 100%; object-fit: contain; margin: 0 auto; display: block;" />
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Recent 5 Trades Table -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+              <div style="font-size: 11px; font-weight: bold; color: #0f172a; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">📋 最近交易覆盤明細紀錄 (Recent Trades History)</div>
+              <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                  <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 10px; color: #64748b; font-weight: bold; text-transform: uppercase;">
+                    <th style="padding: 8px; width: 10%;">日期</th>
+                    <th style="padding: 8px; width: 25%;">商品名稱</th>
+                    <th style="padding: 8px; width: 22%;">交易方向 / 屬性</th>
+                    <th style="padding: 8px; width: 18%; text-align: right;">進 / 出場價</th>
+                    <th style="padding: 8px; width: 15%; text-align: right;">淨損益</th>
+                    <th style="padding: 8px; width: 10%; text-align: center;">評等</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRowsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Creed Ref -->
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+              <div style="font-size: 11px; font-weight: bold; color: #166534;">🕵️‍♂️ 阿魯米期望值心法提醒與統計反思</div>
+              <div style="font-size: 10px; color: #15803d; line-height: 1.6; margin-top: 4px;">
+                「動能的真諦在於：強的時候有我們，弱的時候一無所有。只要每次都做『好交易』，讓正期望值發揮統計優勢，本金成長只是水到渠成的結果。」
+                本期累積好交易達 <strong style="font-size: 11px;">${statsCache.goodCount} 次</strong>，壞交易累積 <strong style="font-size: 11px;">${statsCache.badCount} 次</strong>。當勝率大於盈虧比對應門檻時，資產重力加速度方向即為向上。
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; font-weight: 500;">
+              <span>個股期貨動能覆盤日誌 • 期望值統計月報中心</span>
+              <span>頁次：第 1 頁，共 1 頁</span>
+            </div>
+          `;
+
+          document.body.appendChild(reportDiv);
+
+          const options = {
+            margin: 10,
+            filename: `個股期貨型動能覆盤月報_${getTodayDateString()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+
+          await html2pdf().from(reportDiv).set(options).save();
+          document.body.removeChild(reportDiv);
+          alert("🎉 精美 PDF 覆盤月報已成功產生並下載！");
+        } catch (error) {
+          console.error("PDF Export error:", error);
+          alert("❌ PDF 匯出失敗：" + error.message);
+        } finally {
+          if (btn) {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            btn.style.opacity = "";
           }
         }
       }
