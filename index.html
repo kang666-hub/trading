@@ -377,6 +377,35 @@
                 </div>
               </div>
 
+              <!-- Trade database selector widget -->
+              <div class="bg-slate-900/35 border border-terminal-accent/50 rounded-xl p-4.5 shadow-inner">
+                <label class="block text-xs text-[#10b981] font-bold mb-1.5 flex items-center gap-1.5">
+                  <span class="inline-block w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+                  標的商品搜尋並選擇 (Search & Select Stock Futures)
+                </label>
+                <div class="relative" id="product-search-wrapper">
+                  <div class="relative">
+                    <span class="absolute left-3.5 top-2.5 text-gray-400 text-xs">🔍</span>
+                    <input type="text" id="product-search-input" placeholder="可輸入標的簡稱、證券代號或期貨代碼 (例如: 台積電, 2330, CD)..." class="w-full bg-terminal-bg border border-terminal-accent hover:border-terminal-accent/80 focus:border-profit focus:ring-1 focus:ring-profit rounded-lg pl-9 pr-8 py-2 text-sm text-white focus:outline-none placeholder-gray-600 font-mono" onfocus="showProductDropdown()" oninput="filterProducts(this.value)">
+                    <button type="button" onclick="clearProductSelection()" class="absolute right-3 top-2.5 text-gray-500 hover:text-white transition-all text-xs focus:outline-none">✕</button>
+                  </div>
+                  
+                  <!-- Contract month selection -->
+                  <div class="flex items-center gap-1.5 mt-2.5 bg-terminal-bg/40 p-2 rounded-lg border border-terminal-accent/20">
+                    <span class="text-[11px] text-gray-300 font-medium">指定到期合約月份:</span>
+                    <select id="contract-month-select" class="bg-terminal-bg border border-terminal-accent focus:border-profit text-xs text-white rounded-md px-2.5 py-1 focus:outline-none font-mono" onchange="updateGeneratedCodeAndName()">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                    <span class="text-[10px] text-gray-500 font-mono">(將自動填入對應 5 碼代號、到期月份及每點價值)</span>
+                  </div>
+
+                  <!-- Dropdown options panel -->
+                  <div id="product-dropdown-list" class="hidden absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto bg-slate-950 border border-terminal-accent/80 rounded-lg shadow-2xl z-50 divide-y divide-terminal-accent/30 font-mono text-xs">
+                    <!-- Loaded dynamically via JS -->
+                  </div>
+                </div>
+              </div>
+
               <!-- General details grid -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
@@ -501,6 +530,59 @@
                       <option value="[B-3] 開盤開B（異常開高走低）果斷抹除風險">[B-3] 開盤開B（異常開高走低）果斷抹除風險</option>
                       <option value="[B-4] 達標分批停利">[B-4] 達標分批停利</option>
                     </select>
+                  </div>
+                </div>
+
+                <!-- Risk & Strategy Plan Section -->
+                <div class="md:col-span-2 bg-[#0c1322] border border-terminal-accent/40 rounded-xl p-5 space-y-4">
+                  <div class="flex justify-between items-center border-b border-terminal-accent/30 pb-2">
+                    <div class="text-sm font-bold text-gray-200 flex items-center gap-2">
+                      <span>📐</span> 風控與防守規劃 (Risk & Reward Planning)
+                    </div>
+                    <span class="text-[10px] text-gray-500 font-mono">進場時就要想好防守點與期望回報</span>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Planning Inputs -->
+                    <div class="space-y-3 bg-[#0d1525]/50 p-3.5 border border-terminal-accent/20 rounded-xl">
+                      <div>
+                        <label class="block text-[11px] text-gray-400 mb-1 flex items-center justify-between">
+                          <span class="font-semibold text-gray-300">🛡️ 規劃防守價 (Stop Loss Price)</span>
+                          <span class="text-[10px] text-loss font-semibold font-mono" id="plan-risk-points">--</span>
+                        </label>
+                        <input type="number" step="any" id="trade-plan-stop" placeholder="進場時擬定之絕對防守停損價" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] text-gray-400 mb-1 flex items-center justify-between">
+                          <span class="font-semibold text-gray-300">🎯 規劃目標價 (Target Price)</span>
+                          <span class="text-[10px] text-profit font-semibold font-mono" id="plan-reward-points">--</span>
+                        </label>
+                        <input type="number" step="any" id="trade-plan-target" placeholder="進場時設定之期望波段滿足價" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                      </div>
+                    </div>
+
+                    <!-- Live Risk Calculations & Warning Panel -->
+                    <div class="bg-[#0f172a]/70 border border-terminal-accent/20 rounded-xl p-4 flex flex-col justify-between space-y-2">
+                      <div id="plan-ratio-result" class="space-y-2 text-xs">
+                        <div class="flex justify-between items-center text-gray-400 font-medium">
+                          <span>規劃賺賠比 (Risk/Reward Ratio):</span>
+                          <span id="plan-rr-ratio" class="font-bold text-gray-200 font-mono text-xs">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-400 font-medium">
+                          <span>單筆預期最大損失 (Expected Max Risk):</span>
+                          <span id="plan-risk-value" class="font-bold text-gray-200 font-mono text-xs">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-400 font-medium">
+                          <span>佔初始交易資本比例 (Capital Risk %):</span>
+                          <span id="plan-risk-pct" class="font-bold text-gray-200 font-mono text-xs">--</span>
+                        </div>
+                      </div>
+                      
+                      <!-- Live risk hint alerts -->
+                      <div id="plan-risk-alert" class="text-[11px] leading-relaxed select-none py-2 px-3 bg-slate-900/50 rounded-lg border border-terminal-accent/20 text-gray-400 font-medium text-center">
+                        請填寫「進場價格」與「規劃防守價」以即時評估風控狀態。
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -640,14 +722,21 @@
               </div>
               
               <!-- Quick Help/Legend -->
-              <div class="pt-2.5 border-t border-terminal-accent/30 flex flex-col gap-1.5 text-[9px] text-gray-500 leading-normal">
-                <div class="flex justify-between items-center">
-                  <div class="flex gap-2 font-medium">
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-profit/30 border border-profit/50 block"></span>獲利日</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-loss/30 border border-loss/50 block"></span>虧損日</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50 border border-amber-500 block animate-pulse"></span>建倉/持倉</span>
+              <div class="pt-2.5 border-t border-terminal-accent/30 flex flex-col gap-2 text-[9px] text-gray-500 leading-normal">
+                <div class="grid grid-cols-2 gap-1 px-1">
+                  <div class="flex flex-col gap-1">
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-profit/30 border border-profit block"></span>🟢 單純獲利日</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-loss/30 border border-loss block"></span>🔴 單純虧損日</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500/50 border border-amber-500 block animate-pulse"></span>🟠 倉位/持倉中</span>
                   </div>
-                  <div>點擊日期篩選當天</div>
+                  <div class="flex flex-col gap-1 border-l border-terminal-accent/20 pl-2.5">
+                    <span class="flex items-center gap-1 text-emerald-400 font-semibold"><span class="inline-block px-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/35 rounded text-[8px] transform scale-90">💎 紀律</span> 100%好交易日</span>
+                    <span class="flex items-center gap-1 text-indigo-400 font-semibold"><span class="inline-block px-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/35 rounded text-[8px] transform scale-90">⚖️ 綜合</span> 賺賠綜合震盪日</span>
+                  </div>
+                </div>
+                <div class="flex justify-between items-center text-[8.5px] text-gray-400 border-t border-terminal-accent/10 pt-1.5 px-1">
+                  <span>💡 點擊任一日期可篩選當日明細</span>
+                  <span class="text-right">紀律優先 ⚖️</span>
                 </div>
               </div>
             </div>
@@ -1063,6 +1152,7 @@
         logSelectedDate: null,
         calendarYear: new Date().getFullYear(),
         calendarMonth: new Date().getMonth(),
+        selectedProduct: null,
         charts: {
           mini: null,
           large: null,
@@ -1081,6 +1171,200 @@
         "FIPNF": "欣興期06"
       };
 
+      // Comprehensive Stock Futures Database from reference sheet
+      const FUTURES_DB = [
+        { code: 'CA', name: '南亞', ticker: '1303' },
+        { code: 'CB', name: '中鋼', ticker: '2002' },
+        { code: 'CC', name: '聯電', ticker: '2303' },
+        { code: 'CD', name: '台積電', ticker: '2330' },
+        { code: 'CE', name: '富邦金', ticker: '2881' },
+        { code: 'CF', name: '台塑', ticker: '1301' },
+        { code: 'CG', name: '仁寶', ticker: '2324' },
+        { code: 'CH', name: '友達', ticker: '2409' },
+        { code: 'CJ', name: '華南金', ticker: '2880' },
+        { code: 'CK', name: '國泰金', ticker: '2882' },
+        { code: 'CL', name: '兆豐金', ticker: '2886' },
+        { code: 'CM', name: '台新新光金', ticker: '2887' },
+        { code: 'CN', name: '中信金', ticker: '2891' },
+        { code: 'CQ', name: '統一', ticker: '1216' },
+        { code: 'CR', name: '遠東新', ticker: '1402' },
+        { code: 'CS', name: '華新', ticker: '1605' },
+        { code: 'CU', name: '中環', ticker: '2323' },
+        { code: 'CW', name: '佳世達', ticker: '2352' },
+        { code: 'CX', name: '大同', ticker: '2371' },
+        { code: 'CY', name: '南亞科', ticker: '2408' },
+        { code: 'CZ', name: '長榮', ticker: '2603' },
+        { code: 'DA', name: '陽明', ticker: '2609' },
+        { code: 'DB', name: '華航', ticker: '2610' },
+        { code: 'DC', name: '彰銀', ticker: '2801' },
+        { code: 'DE', name: '永豐金', ticker: '2890' },
+        { code: 'DF', name: '台泥', ticker: '1101' },
+        { code: 'DG', name: '台化', ticker: '1326' },
+        { code: 'DH', name: '鴻海', ticker: '2317' },
+        { code: 'DI', name: '旺宏', ticker: '2337' },
+        { code: 'DJ', name: '華碩', ticker: '2357' },
+        { code: 'DK', name: '廣達', ticker: '2382' },
+        { code: 'DL', name: '中華電', ticker: '2412' },
+        { code: 'DN', name: '玉山金', ticker: '2884' },
+        { code: 'DO', name: '元大金', ticker: '2885' },
+        { code: 'DP', name: '第一金', ticker: '2892' },
+        { code: 'DQ', name: '群創', ticker: '3481' },
+        { code: 'DS', name: '宏碁', ticker: '2353' },
+        { code: 'DV', name: '聯發科', ticker: '2454' },
+        { code: 'DW', name: '潤泰全', ticker: '2915' },
+        { code: 'DX', name: '緯創', ticker: '3231' },
+        { code: 'DY', name: '亞泥', ticker: '1102' },
+        { code: 'DZ', name: '大成', ticker: '1210' },
+        { code: 'EE', name: '國喬', ticker: '1312' },
+        { code: 'EG', name: '中石化', ticker: '1314' },
+        { code: 'EH', name: '東陽', ticker: '1319' },
+        { code: 'EK', name: '南紡', ticker: '1440' },
+        { code: 'EM', name: '東元', ticker: '1504' },
+        { code: 'EO', name: '中砂', ticker: '1560' },
+        { code: 'EP', name: '亞德客-KY', ticker: '1590' },
+        { code: 'EY', name: '中纖', ticker: '1718' },
+        { code: 'EZ', name: '台肥', ticker: '1722' },
+        { code: 'FB', name: '東和鋼鐵', ticker: '2006' },
+        { code: 'FC', name: '中鴻', ticker: '2014' },
+        { code: 'FE', name: '大成鋼', ticker: '2027' },
+        { code: 'FF', name: '上銀', ticker: '2049' },
+        { code: 'FG', name: '川湖', ticker: '2059' },
+        { code: 'FK', name: '正新', ticker: '2105' },
+        { code: 'FN', name: '裕隆', ticker: '2201' },
+        { code: 'FQ', name: '光寶科', ticker: '2301' },
+        { code: 'FR', name: '台達電', ticker: '2308' },
+        { code: 'FS', name: '金寶', ticker: '2312' },
+        { code: 'FT', name: '華通', ticker: '2313' },
+        { code: 'FV', name: '精英', ticker: '2331' },
+        { code: 'FW', name: '友訊', ticker: '2332' },
+        { code: 'FY', name: '台亞', ticker: '2340' },
+        { code: 'FZ', name: '華邦電', ticker: '2344' },
+        { code: 'GA', name: '聯強', ticker: '2347' },
+        { code: 'GC', name: '鴻準', ticker: '2354' },
+        { code: 'GH', name: '技嘉', ticker: '2376' },
+        { code: 'GI', name: '微星', ticker: '2377' },
+        { code: 'GJ', name: '瑞昱', ticker: '2379' },
+        { code: 'GK', name: '群光', ticker: '2385' },
+        { code: 'GL', name: '正崴', ticker: '2392' },
+        { code: 'GM', name: '億光', ticker: '2393' },
+        { code: 'GN', name: '凌陽', ticker: '2401' },
+        { code: 'GO', name: '漢唐', ticker: '2404' },
+        { code: 'GR', name: '京元電子', ticker: '2449' },
+        { code: 'GU', name: '全新', ticker: '2455' },
+        { code: 'GV', name: '飛宏', ticker: '2457' },
+        { code: 'GW', name: '義隆', ticker: '2458' },
+        { code: 'GX', name: '可成', ticker: '2474' },
+        { code: 'GY', name: '強茂', ticker: '2481' },
+        { code: 'GZ', name: '兆赫', ticker: '2485' },
+        { code: 'HA', name: '瑞軒', ticker: '2489' },
+        { code: 'HB', name: '華新科', ticker: '2492' },
+        { code: 'HC', name: '宏達電', ticker: '2498' },
+        { code: 'HH', name: '中工', ticker: '2515' },
+        { code: 'HI', name: '冠德', ticker: '2520' },
+        { code: 'HL', name: '興富發', ticker: '2542' },
+        { code: 'HO', name: '華固', ticker: '2548' },
+        { code: 'HQ', name: '新興', ticker: '2605' },
+        { code: 'HS', name: '長榮航', ticker: '2618' },
+        { code: 'IA', name: '臺企銀', ticker: '2834' },
+        { code: 'IH', name: '農林', ticker: '2913' },
+        { code: 'II', name: '晶豪科', ticker: '3006' },
+        { code: 'IJ', name: '大立光', ticker: '3008' },
+        { code: 'IM', name: '亞光', ticker: '3019' },
+        { code: 'IO', name: '聯詠', ticker: '3034' },
+        { code: 'IP', name: '智原', ticker: '3035' },
+        { code: 'IQ', name: '文曄', ticker: '3036' },
+        { code: 'IR', name: '欣興', ticker: '3037' },
+        { code: 'IT', name: '晶技', ticker: '3042' },
+        { code: 'IX', name: '景碩', ticker: '3189' },
+        { code: 'IY', name: '新日興', ticker: '3376' },
+        { code: 'IZ', name: '明泰', ticker: '3380' },
+        { code: 'JB', name: '創意', ticker: '3443' },
+        { code: 'JF', name: '嘉澤', ticker: '3533' },
+        { code: 'JM', name: '健策', ticker: '3653' },
+        { code: 'JN', name: 'TPK-KY', ticker: '3673' },
+        { code: 'JP', name: '大聯大', ticker: '3702' },
+        { code: 'JS', name: '和碩', ticker: '4938' },
+        { code: 'JW', name: '長虹', ticker: '5534' },
+        { code: 'JX', name: '群益證', ticker: '6005' },
+        { code: 'JZ', name: '嘉聯益', ticker: '6153' },
+        { code: 'KA', name: '瑞儀', ticker: '6176' },
+        { code: 'KB', name: '聯茂', ticker: '6213' },
+        { code: 'KC', name: '力成', ticker: '6239' },
+        { code: 'KD', name: '同欣電', ticker: '6271' },
+        { code: 'KE', name: '台表科', ticker: '6278' },
+        { code: 'KF', name: '康舒', ticker: '6282' },
+        { code: 'KG', name: '啟碁', ticker: '6285' },
+        { code: 'KI', name: '台虹', ticker: '8039' },
+        { code: 'KK', name: '達方', ticker: '8163' },
+        { code: 'KL', name: '寶成', ticker: '9904' },
+        { code: 'KO', name: '宏全', ticker: '9939' },
+        { code: 'KP', name: '潤泰新', ticker: '9945' },
+        { code: 'KS', name: '聚陽', ticker: '1477' },
+        { code: 'KU', name: '台玻', ticker: '1802' },
+        { code: 'KW', name: '廣宇', ticker: '2328' },
+        { code: 'LB', name: '健鼎', ticker: '3044' },
+        { code: 'LC', name: '台灣大', ticker: '3045' },
+        { code: 'LE', name: '玉晶光', ticker: '3406' },
+        { code: 'LI', name: '台郡', ticker: '6269' },
+        { code: 'LM', name: '美利達', ticker: '9914' },
+        { code: 'LO', name: '合庫金', ticker: '5880' },
+        { code: 'LQ', name: '英業達', ticker: '2356' },
+        { code: 'LR', name: '凱基金', ticker: '2883' },
+        { code: 'LT', name: '遠傳', ticker: '4904' },
+        { code: 'LU', name: '臻鼎-KY', ticker: '4958' },
+        { code: 'LV', name: '中租-KY', ticker: '5871' },
+        { code: 'LW', name: '儒鴻', ticker: '1476' },
+        { code: 'LX', name: '國巨', ticker: '2327' },
+        { code: 'LY', name: '南電', ticker: '8046' },
+        { code: 'MB', name: '敬鵬', ticker: '2355' },
+        { code: 'MJ', name: '致茂', ticker: '2360' },
+        { code: 'MK', name: '美律', ticker: '2439' },
+        { code: 'MQ', name: '矽格', ticker: '6257' },
+        { code: 'MV', name: '百和', ticker: '9938' },
+        { code: 'MY', name: '精華', ticker: '1565' },
+        { code: 'NA', name: '穩懋', ticker: '3105' },
+        { code: 'NB', name: '璟德', ticker: '3152' },
+        { code: 'NC', name: '順達', ticker: '3211' },
+        { code: 'ND', name: '威剛', ticker: '3260' },
+        { code: 'NE', name: '欣銓', ticker: '3264' },
+        { code: 'NG', name: '碩禾', ticker: '3691' },
+        { code: 'NI', name: '晟德', ticker: '4123' },
+        { code: 'NJ', name: '榮剛', ticker: '5009' },
+        { code: 'NL', name: '世界', ticker: '5347' },
+        { code: 'NM', name: '中光電', ticker: '5371' },
+        { code: 'NO', name: '中美晶', ticker: '5483' },
+        { code: 'NQ', name: '新普', ticker: '6121' },
+        { code: 'NS', name: '頎邦', ticker: '6147' },
+        { code: 'NU', name: '網家', ticker: '8044' },
+        { code: 'NV', name: '元太', ticker: '8069' },
+        { code: 'NW', name: '群聯', ticker: '8299' },
+        { code: 'NY', name: '元大台灣50ETF', ticker: '0050' },
+        { code: 'OA', name: '富邦上証ETF', ticker: '006205' },
+        { code: 'OB', name: '元大上證50ETF', ticker: '006206' },
+        { code: 'OD', name: '為升', ticker: '2231' },
+        { code: 'OE', name: '彩晶', ticker: '6116' },
+        { code: 'OH', name: '胡連', ticker: '6279' },
+        { code: 'OJ', name: '國泰中國A50ETF', ticker: '00636' },
+        { code: 'OK', name: '富邦深100ETF', ticker: '00639' },
+        { code: 'OL', name: '大立光(小型)', ticker: '3008', isMini: true },
+        { code: 'OM', name: '精華(小型)', ticker: '1565', isMini: true },
+        { code: 'OO', name: '群益深証中小ETF', ticker: '00643' },
+        { code: 'OP', name: '智邦', ticker: '2345' },
+        { code: 'OQ', name: '樺漢', ticker: '6414' },
+        { code: 'OR', name: '和大', ticker: '1536' },
+        { code: 'OS', name: '榮成', ticker: '1909' },
+        { code: 'OT', name: '聯亞', ticker: '3081' },
+        { code: 'OU', name: '同致', ticker: '3552' },
+        { code: 'OV', name: '台燿', ticker: '6274' },
+        { code: 'OW', name: '環球晶', ticker: '6488' },
+        { code: 'OX', name: '精測', ticker: '6510' },
+        { code: 'OY', name: '精測(小型)', ticker: '6510', isMini: true },
+        { code: 'OZ', name: '日月光投控', ticker: '3711' },
+        { code: 'PA', name: '原相', ticker: '3227' },
+        { code: 'PB', name: '環球晶(小型)', ticker: '6488', isMini: true },
+        { code: 'PC', name: '智擎', ticker: '4162' }
+      ];
+
       // ==========================================
       // INITIALIZATION & LIFECYCLE
       // ==========================================
@@ -1093,6 +1377,17 @@
         // Start live ticker clock 
         updateClock();
         setInterval(updateClock, 1000);
+
+        // Populate contract hot-expiry months
+        populateContractMonths();
+
+        // Close stock futures search dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          const wrapper = document.getElementById('product-search-wrapper');
+          if (wrapper && !wrapper.contains(e.target)) {
+            hideProductDropdown();
+          }
+        });
         
         // Apply keyboard shortcut
         window.addEventListener('keydown', (e) => {
@@ -1647,6 +1942,189 @@
       // ==========================================
       // TAB 2: NEW TRADE FORM INTERACTION
       // ==========================================
+      function populateContractMonths() {
+        const select = document.getElementById('contract-month-select');
+        if (!select) return;
+        
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = d.getMonth(); // 0-11
+        
+        // Find third Wednesday of this current month
+        let wedsCount = 0;
+        let thirdWed = 0;
+        for (let day = 1; day <= 31; day++) {
+          const tempDate = new Date(year, month, day);
+          if (tempDate.getMonth() !== month) break;
+          if (tempDate.getDay() === 3) { // Wednesday
+            wedsCount++;
+            if (wedsCount === 3) {
+              thirdWed = day;
+              break;
+            }
+          }
+        }
+        
+        let startMonthIndex = month; // default current month
+        // If today is past the third Wednesday, hot contract is next month!
+        if (d.getDate() > thirdWed || (d.getDate() === thirdWed && d.getHours() >= 14)) {
+          startMonthIndex = month + 1;
+        }
+        
+        select.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+          const targetDate = new Date(year, startMonthIndex + i, 15);
+          const m = targetDate.getMonth() + 1;
+          const mStr = String(m).padStart(2, '0');
+          const isNear = (i === 0);
+          const isNext = (i === 1);
+          const suffix = isNear ? ' (熱門近月)' : (isNext ? ' (次月)' : '');
+          
+          const opt = document.createElement('option');
+          opt.value = mStr;
+          opt.textContent = `${mStr}月${suffix}`;
+          select.appendChild(opt);
+        }
+      }
+
+      function showProductDropdown() {
+        const list = document.getElementById('product-dropdown-list');
+        if (list) {
+          list.classList.remove('hidden');
+          // Filter with current input value
+          const query = document.getElementById('product-search-input').value;
+          filterProducts(query);
+        }
+      }
+
+      function hideProductDropdown() {
+        const list = document.getElementById('product-dropdown-list');
+        if (list) {
+          // Wrap in a tiny timeout to allow click events on items to register first
+          setTimeout(() => {
+            list.classList.add('hidden');
+          }, 180);
+        }
+      }
+
+      function filterProducts(query) {
+        const list = document.getElementById('product-dropdown-list');
+        if (!list) return;
+        
+        const trimmed = query.trim().toUpperCase();
+        
+        // Filter the FUTURES_DB matches
+        const matches = FUTURES_DB.filter(p => {
+          if (!trimmed) return true; // Show all when empty query
+          return p.name.toUpperCase().includes(trimmed) || 
+                 p.code.toUpperCase().includes(trimmed) || 
+                 p.ticker.toUpperCase().includes(trimmed);
+        }).slice(0, 15); // Show top 15 results
+        
+        list.innerHTML = '';
+        if (matches.length === 0) {
+          list.innerHTML = `<div class="p-3 text-center text-gray-500 italic">無匹配的標的商品...</div>`;
+          return;
+        }
+        
+        matches.forEach(product => {
+          const isMini = product.isMini || product.name.includes('小型');
+          const row = document.createElement('div');
+          row.className = "flex justify-between items-center px-4 py-3 hover:bg-terminal-accent/40 text-gray-200 hover:text-white cursor-pointer transition-colors";
+          
+          let badgeColor = isMini ? "bg-amber-950/40 text-amber-400 border border-amber-500/35" : "bg-emerald-950/40 text-emerald-400 border border-emerald-500/35";
+          let badgeText = isMini ? "100 小型" : "2000 標準";
+          
+          row.innerHTML = `
+            <div class="flex flex-col gap-0.5">
+              <span class="font-bold text-sm flex items-center gap-1.5 text-white">
+                ${product.name}
+                <span class="text-[10px] px-1.5 py-0.5 rounded ${badgeColor}">${badgeText}</span>
+              </span>
+              <span class="text-xs text-gray-400 font-mono">個股代號: ${product.ticker} | 期貨代碼: <span class="text-profit font-semibold">${product.code}</span></span>
+            </div>
+            <div class="text-right flex flex-col items-end">
+              <span class="text-xs bg-terminal-accent/30 text-gray-300 font-mono rounded px-2 py-0.5 border border-terminal-accent/20">FI${product.code}F</span>
+            </div>
+          `;
+          
+          row.onclick = () => {
+            selectProduct(product);
+          };
+          list.appendChild(row);
+        });
+      }
+
+      function selectProduct(product) {
+        state.selectedProduct = product;
+        
+        const searchInput = document.getElementById('product-search-input');
+        if (searchInput) {
+          searchInput.value = `${product.name} (${product.code} / ${product.ticker})`;
+        }
+        
+        updateGeneratedCodeAndName();
+        
+        // Force type select to "個股期貨" radio button
+        const typeRadios = document.getElementsByName('trade-type');
+        for (let r of typeRadios) {
+          if (r.value === '個股期貨') {
+            r.checked = true;
+          }
+        }
+        
+        const dropdown = document.getElementById('product-dropdown-list');
+        if (dropdown) dropdown.classList.add('hidden');
+      }
+
+      function updateGeneratedCodeAndName() {
+        if (!state.selectedProduct) return;
+        const product = state.selectedProduct;
+        
+        const monthSelect = document.getElementById('contract-month-select');
+        const month = monthSelect ? monthSelect.value : '06';
+        
+        // 1. Construct 5-digit code: FI + [2-letter-code] + F
+        const contractCode = `FI${product.code}F`.toUpperCase();
+        document.getElementById('trade-code').value = contractCode;
+        
+        // 2. Construct Chinese name: [Name]期[Month]
+        let displayName = product.name;
+        if (product.isMini) {
+          const baseName = product.name.replace('(小型)', '').replace('小型', '');
+          displayName = `小型${baseName}`;
+        }
+        document.getElementById('trade-name').value = `${displayName}期${month}`;
+        
+        // 3. Populate Point Value (100 for mini, 2000 for standard)
+        if (product.isMini || product.name.includes('小型')) {
+          setPointValue(100);
+        } else {
+          setPointValue(2000);
+        }
+        
+        // Apply formulas update
+        if (typeof updateFormCalculations === 'function') {
+          updateFormCalculations();
+        }
+      }
+
+      function clearProductSelection() {
+        state.selectedProduct = null;
+        const searchInput = document.getElementById('product-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+        }
+        
+        const codeInput = document.getElementById('trade-code');
+        const nameInput = document.getElementById('trade-name');
+        if (codeInput) codeInput.value = '';
+        if (nameInput) nameInput.value = '';
+        
+        // Clear filtered list
+        filterProducts('');
+      }
+
       function predictName(code) {
         const upperCode = code.toUpperCase();
         if (SAMPLE_CODE_MAP[upperCode]) {
@@ -1743,6 +2221,75 @@
         const exitPrice = parseFloat(document.getElementById('trade-exit-price').value) || 0;
         const qty = parseInt(document.getElementById('trade-qty').value) || 1;
         const pointValue = parseInt(document.getElementById('trade-point-value').value) || 2000;
+        
+        // Real-time Risk & Strategy Planning calculations
+        const planStopInput = document.getElementById('trade-plan-stop');
+        const planTargetInput = document.getElementById('trade-plan-target');
+        
+        if (planStopInput && planTargetInput) {
+          const planStop = parseFloat(planStopInput.value) || 0;
+          const planTarget = parseFloat(planTargetInput.value) || 0;
+          const initialCapital = Number(state.settings.initialCapital) || 500000;
+          
+          let planRiskPoints = 0;
+          let planRewardPoints = 0;
+          
+          if (entryPrice > 0 && planStop > 0) {
+            planRiskPoints = entryPrice - planStop;
+            document.getElementById('plan-risk-points').innerText = `損價差: ${planRiskPoints >= 0 ? '-' : '+'}${Math.abs(planRiskPoints).toFixed(1)} 點`;
+          } else {
+            document.getElementById('plan-risk-points').innerText = '--';
+          }
+          
+          if (entryPrice > 0 && planTarget > 0) {
+            planRewardPoints = planTarget - entryPrice;
+            document.getElementById('plan-reward-points').innerText = `盈價差: ${planRewardPoints >= 0 ? '+' : '-'}${Math.abs(planRewardPoints).toFixed(1)} 點`;
+          } else {
+            document.getElementById('plan-reward-points').innerText = '--';
+          }
+          
+          // Calculations
+          const totalRiskVal = planRiskPoints > 0 ? planRiskPoints * qty * pointValue : 0;
+          const riskOfCapitalPct = initialCapital > 0 ? (totalRiskVal / initialCapital) * 100 : 0;
+          
+          let rrRatioStr = '--';
+          let rrVal = 0;
+          if (planRiskPoints > 0 && planRewardPoints > 0) {
+            rrVal = planRewardPoints / planRiskPoints;
+            rrRatioStr = `1 : ${rrVal.toFixed(2)}`;
+          } else if (planRiskPoints <= 0 && planStop > 0) {
+            rrRatioStr = '無效單 (防守高於進場)';
+          }
+          
+          // Populate labels
+          document.getElementById('plan-rr-ratio').innerText = rrRatioStr;
+          document.getElementById('plan-risk-value').innerText = totalRiskVal > 0 ? `$${formatNumber(totalRiskVal)}` : '--';
+          document.getElementById('plan-risk-pct').innerText = totalRiskVal > 0 ? `${riskOfCapitalPct.toFixed(2)}%` : '--';
+          
+          // Risk Alert/Hint system
+          const alertEl = document.getElementById('plan-risk-alert');
+          if (alertEl) {
+            if (entryPrice <= 0 || planStop <= 0) {
+              alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-slate-900/50 rounded-lg border border-terminal-accent/20 text-gray-400 font-medium text-center";
+              alertEl.innerHTML = `請填寫「進場價格」與「規劃防守價」以即時評估風控狀態。`;
+            } else if (planStop >= entryPrice) {
+              alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-red-300 font-semibold text-center";
+              alertEl.innerHTML = `❌ <strong>異常：防守價大於或等於進場價！</strong>進場即停損，或因防守無效而極具重倉爆倉風險。`;
+            } else {
+              if (riskOfCapitalPct > 2.0) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
+                alertEl.innerHTML = `⚠️ <strong>警訊：單筆最大風險達 ${riskOfCapitalPct.toFixed(1)}%！</strong>已超越專業風控之 2% 臨界上限。強烈建議：1. 調降進場口數/張數（目前為 ${qty}） 2. 接近支撐位或縮窄防守點以縮減虧損空間。`;
+              } else if (planTarget > 0 && rrVal < 2.0) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-200 font-medium text-left";
+                alertEl.innerHTML = `⚠️ <strong>警訊：賺賠比過低！</strong>目前規劃風報比僅 ${rrRatioStr}（未達 1:2 合格標準）。代表這筆交易您承擔的風險高於預期收益，請重新評估是否值得出手交易。`;
+              } else {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
+                const displayRatioStr = planTarget > 0 ? `賺賠比 ${rrRatioStr}（大於 2.0 優秀）` : '具備清晰防守點';
+                alertEl.innerHTML = `✅ <strong>風控與戰略合格！</strong>${displayRatioStr}，且單筆損失佔總資金僅 ${riskOfCapitalPct.toFixed(1)}% 在 2% 安全邊界內。請在開盤後如實落實本規劃！`;
+              }
+            }
+          }
+        }
         
         // Auto default lot fee calculation if not user modified
         const feeInput = document.getElementById('trade-fee');
@@ -1917,6 +2464,13 @@
 
        function clearTradeForm() {
         state.editingTradeId = null;
+        state.selectedProduct = null;
+        const searchInput = document.getElementById('product-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+        }
+        populateContractMonths();
+
         document.getElementById('new-trade-form').reset();
         document.getElementById('trade-entry-date').value = getTodayDateString();
         document.getElementById('trade-exit-date').value = getTodayDateString();
@@ -2025,6 +2579,8 @@
         const qty = parseInt(document.getElementById('trade-qty').value) || 1;
         const pointValue = parseInt(document.getElementById('trade-point-value').value) || 2000;
         const fee = parseFloat(document.getElementById('trade-fee').value) || 0;
+        const planStop = parseFloat(document.getElementById('trade-plan-stop').value) || 0;
+        const planTarget = parseFloat(document.getElementById('trade-plan-target').value) || 0;
 
         let exitDateVal = "";
         let exitPrice = 0;
@@ -2081,7 +2637,9 @@
           note: document.getElementById('trade-note').value.trim(),
           grossPnL: grossPnL,
           netPnL: netPnL,
-          isClosed: isClosed
+          isClosed: isClosed,
+          planStop: planStop,
+          planTarget: planTarget
         };
 
         if (state.editingTradeId) {
@@ -2287,15 +2845,117 @@
             `;
             body.appendChild(trRow);
 
+            // Generate dynamically computed post-trade compliance review HTML
+            let planReviewHtml = '';
+            if (tr.planStop && tr.planStop > 0) {
+              const planStopVal = Number(tr.planStop);
+              const planTargetVal = Number(tr.planTarget) || 0;
+              const entryPriceVal = Number(tr.entryPrice) || 0;
+              const exitPriceVal = Number(tr.exitPrice) || 0;
+              
+              const initialCapital = Number(state.settings.initialCapital) || 500000;
+              const planRiskPoints = entryPriceVal - planStopVal;
+              const planRewardPoints = planTargetVal > 0 ? (planTargetVal - entryPriceVal) : 0;
+              const pointVal = Number(tr.pointValue) || 2000;
+              
+              let rrRatioStr = '--';
+              if (planRiskPoints > 0 && planRewardPoints > 0) {
+                rrRatioStr = `1 : ${(planRewardPoints / planRiskPoints).toFixed(2)}`;
+              }
+              
+              const totalRiskVal = planRiskPoints * tr.qty * pointVal;
+              const riskOfCapitalPct = (totalRiskVal / initialCapital) * 100;
+              
+              let reviewText = "";
+              let reviewColorClass = "";
+              
+              if (isClosed) {
+                const isLoss = (exitPriceVal < entryPriceVal);
+                const isWin = (exitPriceVal > entryPriceVal);
+                
+                if (isLoss) {
+                  if (exitPriceVal < planStopVal) {
+                    const slippagePct = ((planStopVal - exitPriceVal) / planStopVal) * 100;
+                    if (slippagePct > 1.0) {
+                      reviewText = `❌ <strong>嚴重凹單！</strong>平倉出場價 (${exitPriceVal.toFixed(1)}) 嚴重跌破規劃防守價 (${planStopVal.toFixed(1)}) 達 ${slippagePct.toFixed(1)}%，代表執行停損不力，違反風控規劃之承諾。`;
+                      reviewColorClass = "text-[#f43f5e] bg-red-955/40 border border-red-500/30";
+                    } else {
+                      reviewText = `⚠️ <strong>輕微滑價停損：</strong>平倉價格基本吻合規劃防守價 (${planStopVal.toFixed(1)}) 附近出場，紀律抗壓合格。`;
+                      reviewColorClass = "text-amber-200 bg-amber-955/40 border border-amber-500/30";
+                    }
+                  } else {
+                    reviewText = `✅ <strong>紀律優異！</strong>在跌破預期防守停損價 (${planStopVal.toFixed(1)}) 之前，便提早或剛好在防守點果斷執行停損平倉。`;
+                    reviewColorClass = "text-profit bg-green-955/40 border border-profit/30";
+                  }
+                } else if (isWin) {
+                  if (planTargetVal > 0) {
+                    if (exitPriceVal >= planTargetVal) {
+                      reviewText = `🏆 <strong>完美達標！</strong>平倉價 (${exitPriceVal.toFixed(1)}) 成功跨越或達到規劃目標利潤點 (${planTargetVal.toFixed(1)})！徹底依戰略抱牢大部位。`;
+                      reviewColorClass = "text-profit bg-green-955/40 border border-profit/30";
+                    } else {
+                      reviewText = `⚠️ <strong>提前停利 / 抱不牢：</strong>平倉價 (${exitPriceVal.toFixed(1)}) 尚未達到規劃目標價 (${planTargetVal.toFixed(1)}) 即提早離場，未完整吃滿原波段規劃，建議注意克服浮盈焦慮。`;
+                      reviewColorClass = "text-amber-200 bg-amber-955/40 border border-amber-500/30";
+                    }
+                  } else {
+                    reviewText = `✅ <strong>獲利出場！</strong>（進場未設定明確目標，依當下動能順勢調整）。`;
+                    reviewColorClass = "text-profit bg-green-955/40 border border-profit/30";
+                  }
+                } else {
+                  reviewText = `⚖️ <strong>平盤保本平倉：</strong>主動降低無效交易成本。`;
+                  reviewColorClass = "text-gray-300 bg-slate-900/40 border border-terminal-accent/30";
+                }
+              } else {
+                reviewText = `⏳ <strong>持倉中 - 紀律防守中：</strong>請確實依原定防守停損點 <span class="font-bold text-loss font-mono">${planStopVal.toFixed(1)}</span> 落實安全邊界！目標價: <span class="font-bold text-profit font-mono">${planTargetVal > 0 ? planTargetVal.toFixed(1) : '無'}</span>。`;
+                reviewColorClass = "text-blue-300 bg-blue-955/40 border border-blue-500/30";
+              }
+              
+              planReviewHtml = `
+                <div class="mt-3.5 space-y-2 border-t border-terminal-accent/20 pt-3 text-[11px]">
+                  <div class="text-gray-400 font-bold flex items-center gap-1 leading-none">
+                    <span>📐</span> 進場防守規劃 (Strategy Plan)
+                  </div>
+                  <div class="grid grid-cols-2 gap-1.5 font-mono bg-[#070b12] p-2.5 rounded border border-terminal-accent/15 leading-none text-[10px] space-y-0.5">
+                    <div>
+                      <span class="text-gray-500">規劃防守價:</span>
+                      <span class="text-loss font-semibold block mt-0.5">${planStopVal.toFixed(1)}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-500">規劃目標價:</span>
+                      <span class="text-profit font-semibold block mt-0.5">${planTargetVal > 0 ? planTargetVal.toFixed(1) : '順勢'}</span>
+                    </div>
+                    <div class="col-span-2 border-t border-terminal-accent/10 pt-1.5 flex justify-between items-center">
+                      <span class="text-gray-500">規劃風報比:</span>
+                      <span class="text-amber-400 font-bold font-mono">${rrRatioStr}</span>
+                    </div>
+                    <div class="col-span-2 flex justify-between items-center">
+                      <span class="text-gray-500">單邊最大風險:</span>
+                      <span class="text-red-400 font-semibold font-mono">$${formatNumber(totalRiskVal)} (${riskOfCapitalPct.toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="border p-2.5 rounded-lg text-[10.5px] leading-relaxed leading-normal font-sans ${reviewColorClass}">
+                    <span class="font-bold block text-[9.5px] uppercase mb-0.5 tracking-wider">🎯 規劃與執行度檢討：</span>
+                    ${reviewText}
+                  </div>
+                </div>
+              `;
+            } else {
+              planReviewHtml = `
+                <div class="mt-3.5 space-y-2 border-t border-terminal-accent/20 pt-3 text-[11px] text-gray-500 italic text-center py-1 bg-[#070b12]/50 border border-terminal-accent/10 rounded-lg">
+                  ℹ️ 此單建倉時尚未登錄防守停損與目標價。規劃風險與預期賺賠比是一切長久交易的根基！
+                </div>
+              `;
+            }
+
             // Accordion detail view container 
             const trDetail = document.createElement('tr');
             trDetail.id = `row-detail-${tr.id}`;
             trDetail.className = "hidden bg-[#0d131f]/95 font-normal select-text cursor-default";
-
+ 
             const detailExitReasonStr = isClosed 
               ? tr.exitReason 
               : `<span class="text-warning italic font-semibold">🔍 持倉狀態：點看操作列的「⚡平倉」按鈕進入表單，輸入賣出價格即可由系統為您自動分析盈虧、覆盤好壞！</span>`;
-
+ 
             const detailPnLCardStr = isClosed 
               ? `
                   <div class="flex justify-between">
@@ -2312,7 +2972,7 @@
                     ⏳ 部位尚未平倉，未實現盈虧中
                   </div>
                 `;
-
+ 
             trDetail.innerHTML = `
               <td colspan="10" class="p-5 border-l-2 border-terminal-accent whitespace-normal break-words">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-gray-300 whitespace-normal break-words">
@@ -2342,6 +3002,7 @@
                         <span class="font-bold">${(tr.entryPrice * tr.qty * tr.pointValue / state.settings.initialCapital * 100).toFixed(1)}%</span>
                       </div>
                     </div>
+                    ${planReviewHtml}
                   </div>
                   <div class="space-y-3 min-w-0 whitespace-normal break-words">
                     <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] select-none">思維思緒與覆盤檢討</div>
@@ -2468,13 +3129,29 @@
           cell.setAttribute('onclick', `filterDateFromCalendar('${dateString}')`);
 
           // Determine styles
-          let baseClasses = "flex flex-col items-center justify-center p-1 relative rounded-lg min-h-[38px] transition-all duration-150 cursor-pointer text-[10.5px] border select-none ";
+          let baseClasses = "flex flex-col items-center justify-center p-1 relative rounded-lg min-h-[46px] transition-all duration-150 cursor-pointer text-[10.5px] border select-none ";
           let stateClasses = "bg-terminal-bg/30 text-gray-400 border-terminal-accent/10 hover:bg-terminal-accent/30 hover:text-white ";
+
+          let isPureGoodDay = false;
+          let isMixedDay = false;
 
           if (dayTradesCount > 0) {
             const hasHolding = dayTrades.some(tr => tr.isClosed === false);
+            
+            // Check for Pure Good Trade Day: Day has trades, and ALL trades on this day are 🟢好交易!
+            isPureGoodDay = dayTrades.every(tr => tr.rating === '🟢好交易');
+            
+            // Check for Mixed Profit & Loss Day: at least one winning trade and one losing trade
+            const hasWins = dayTrades.some(tr => (Number(tr.netPnL) || 0) > 0);
+            const hasLosses = dayTrades.some(tr => (Number(tr.netPnL) || 0) < 0);
+            isMixedDay = dayTradesCount > 1 && hasWins && hasLosses;
+
             if (hasHolding) {
               stateClasses = "bg-[#3e240a]/90 border-[#f59e0b] hover:bg-[#52300e] text-amber-100 font-extrabold ring-1 ring-[#f59e0b]/40 shadow-[0_0_12px_rgba(245,158,11,0.4)] scale-[1.03] animate-pulse-subtle ";
+            } else if (isPureGoodDay) {
+              stateClasses = "bg-emerald-950/80 border-emerald-500 hover:bg-emerald-900/90 text-white font-extrabold ring-1 ring-emerald-400/40 shadow-[0_0_14px_rgba(16,185,129,0.55),_inset_0_1px_1px_rgba(52,211,153,0.3)] scale-[1.03] ";
+            } else if (isMixedDay) {
+              stateClasses = "bg-indigo-950/80 border-indigo-500 hover:bg-indigo-900/90 text-indigo-100 font-extrabold ring-1 ring-indigo-400/40 shadow-[0_0_14px_rgba(99,102,241,0.55),_inset_0_1px_1px_rgba(129,140,248,0.3)] scale-[1.03] ";
             } else if (dayNetPnL > 0) {
               stateClasses = "bg-[#0b2d18]/90 border-[#10b981] hover:bg-[#114a26] text-white font-bold ring-1 ring-[#10b981]/30 shadow-[0_0_10px_rgba(16,185,129,0.3)] scale-[1.02] ";
             } else if (dayNetPnL < 0) {
@@ -2491,13 +3168,22 @@
           cell.className = baseClasses + stateClasses;
           
           // Day number
-          let cellHtml = `<span class="text-xs font-mono font-bold">${day}</span>`;
+          let cellHtml = `<span class="text-xs font-mono font-bold leading-none mb-0.5">${day}</span>`;
           
           // Show small value if there are trades
           if (dayTradesCount > 0) {
             const displayPnL = formatBriefPnl(dayNetPnL);
-            const textCol = dayNetPnL > 0 ? "text-[8.5px] text-[#10b981] font-mono leading-none mt-1 font-bold" : (dayNetPnL < 0 ? "text-[8.5px] text-[#f43f5e] font-mono leading-none mt-1 font-bold" : "text-[8.5px] text-gray-300 font-mono leading-none mt-1 font-bold");
+            const textCol = dayNetPnL > 0 ? "text-[8.5px] text-[#10b981] font-mono leading-none mt-1 font-extrabold" : (dayNetPnL < 0 ? "text-[8.5px] text-[#f43f5e] font-mono leading-none mt-1 font-extrabold" : "text-[8.5px] text-gray-300 font-mono leading-none mt-1 font-bold");
             cellHtml += `<span class="${textCol}">${displayPnL}</span>`;
+
+            // Render specific visual labels/badges inside the cell block!
+            if (isPureGoodDay) {
+              cellHtml += `<span class="mt-1 text-[7px] font-bold px-1 py-0.2 bg-emerald-500 text-black rounded scale-[0.9] tracking-tighter uppercase whitespace-nowrap">💎 紀律</span>`;
+            } else if (isMixedDay) {
+              cellHtml += `<span class="mt-1 text-[7px] font-bold px-1 py-0.2 bg-indigo-500 text-white rounded scale-[0.9] tracking-tighter uppercase whitespace-nowrap">⚖️ 綜合</span>`;
+            } else {
+              cellHtml += `<span class="text-[7.5px] text-gray-400 leading-none scale-[0.8] font-mono mt-0.5">${dayTradesCount}筆</span>`;
+            }
           }
 
           cell.innerHTML = cellHtml;
@@ -2548,6 +3234,52 @@
         // Switch tab to form
         switchTab('new-trade');
 
+        // Populate search selector details
+        populateContractMonths();
+        let matchingProduct = null;
+        if (tr.code) {
+          const cleanedCode = tr.code.replace(/^FI/, '').replace(/F$/, '').toUpperCase();
+          const strippedCode = cleanedCode.replace(/\d+/g, '');
+          matchingProduct = FUTURES_DB.find(p => p.code === strippedCode || p.code === cleanedCode || p.code === tr.code.toUpperCase());
+        }
+        
+        if (matchingProduct) {
+          state.selectedProduct = matchingProduct;
+          const searchInput = document.getElementById('product-search-input');
+          if (searchInput) {
+            searchInput.value = `${matchingProduct.name} (${matchingProduct.code} / ${matchingProduct.ticker})`;
+          }
+          
+          let matchedMonth = '';
+          const digitsInCode = tr.code.match(/\d+/);
+          const digitsInName = tr.name.match(/\d+/);
+          if (digitsInCode) {
+            matchedMonth = digitsInCode[0];
+          } else if (digitsInName) {
+            matchedMonth = digitsInName[0];
+          }
+          
+          if (matchedMonth) {
+            const monthSelect = document.getElementById('contract-month-select');
+            if (monthSelect) {
+              let optionExists = Array.from(monthSelect.options).some(opt => opt.value === matchedMonth);
+              if (!optionExists) {
+                const opt = document.createElement('option');
+                opt.value = matchedMonth;
+                opt.textContent = `${matchedMonth}月`;
+                monthSelect.appendChild(opt);
+              }
+              monthSelect.value = matchedMonth;
+            }
+          }
+        } else {
+          state.selectedProduct = null;
+          const searchInput = document.getElementById('product-search-input');
+          if (searchInput) {
+            searchInput.value = tr.name || '';
+          }
+        }
+
         // Populate values
         document.getElementById('trade-code').value = tr.code || '';
         document.getElementById('trade-name').value = tr.name || '';
@@ -2569,6 +3301,9 @@
         document.getElementById('trade-entry-date').value = tr.entryDate || getTodayDateString();
         document.getElementById('trade-entry-price').value = tr.entryPrice || 0;
         document.getElementById('trade-entry-reason').value = tr.entryReason || '';
+
+        document.getElementById('trade-plan-stop').value = tr.planStop || '';
+        document.getElementById('trade-plan-target').value = tr.planTarget || '';
 
         document.getElementById('trade-exit-date').value = tr.exitDate || getTodayDateString();
         document.getElementById('trade-exit-price').value = tr.exitPrice || 0;
@@ -2651,7 +3386,7 @@
         }
 
         let csvContent = "\ufeff"; // BOM
-        const headers = ["ID", "商品代號", "中文名稱", "型態", "部位屬性", "進場日期", "進場價", "出場日期", "出場價", "口數", "每點價值", "手續費", "進場依據", "出場依據", "身心狀態", "評等", "備註", "毛損益", "淨損益"];
+        const headers = ["ID", "商品代號", "中文名稱", "型態", "部位屬性", "進場日期", "進場價", "出場日期", "出場價", "口數", "每點價值", "手續費", "進場依據", "出場依據", "身心狀態", "評等", "備註", "毛損益", "淨損益", "規劃防守價", "規劃目標價"];
         csvContent += headers.map(h => `"${h}"`).join(",") + "\n";
 
         state.trades.forEach(tr => {
@@ -2674,7 +3409,9 @@
             tr.rating,
             tr.note.replace(/"/g, '""'),
             tr.grossPnL,
-            tr.netPnL
+            tr.netPnL,
+            tr.planStop || 0,
+            tr.planTarget || 0
           ];
           csvContent += row.map(val => `"${val}"`).join(",") + "\n";
         });
@@ -2737,6 +3474,8 @@
               note: cols[16] || "",
               grossPnL: parseFloat(cols[17]) || 0,
               netPnL: parseFloat(cols[18]) || 0,
+              planStop: cols[19] !== undefined ? parseFloat(cols[19]) || 0 : 0,
+              planTarget: cols[20] !== undefined ? parseFloat(cols[20]) || 0 : 0,
             });
             parsedCount++;
           }
