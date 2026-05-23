@@ -550,7 +550,8 @@
                           <span class="font-semibold text-gray-300">🛡️ 規劃防守價 (Stop Loss Price)</span>
                           <span class="text-[10px] text-loss font-semibold font-mono" id="plan-risk-points">--</span>
                         </label>
-                        <input type="number" step="any" id="trade-plan-stop" placeholder="進場時擬定之絕對防守停損價" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                        <input type="number" step="any" id="trade-plan-stop" placeholder="進場時擬定之絕對防守停損價" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none transition-colors" oninput="updateFormCalculations()">
+                        <div id="stop-loss-pct-field-alert" class="text-[10px] font-mono mt-1 px-2 py-0.5 rounded transition-all hidden"></div>
                       </div>
                       <div>
                         <label class="block text-[11px] text-gray-400 mb-1 flex items-center justify-between">
@@ -558,6 +559,19 @@
                           <span class="text-[10px] text-profit font-semibold font-mono" id="plan-reward-points">--</span>
                         </label>
                         <input type="number" step="any" id="trade-plan-target" placeholder="進場時設定之期望波段滿足價" class="w-full bg-terminal-bg border border-terminal-accent focus:border-profit rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none" oninput="updateFormCalculations()">
+                        
+                        <!-- Auto Recommended Target Prices Option Box -->
+                        <div id="suggested-target-box" class="hidden mt-2 p-2 bg-terminal-bg border border-terminal-accent/30 rounded-lg text-[10px] space-y-1.5 select-none">
+                          <div class="font-bold text-amber-400 flex items-center gap-1">
+                            <span>💡</span> 期望值翻正・強力建議目標：
+                          </div>
+                          <div class="grid grid-cols-2 gap-1.5">
+                            <button type="button" id="tgt-rec-2r" class="py-1 px-1.5 bg-[#0b2d18]/50 hover:bg-[#114a26] border border-[#10b981]/30 rounded text-left transition-all text-[9.5px] text-white overflow-hidden shrink-0 cursor-pointer" onclick="event.preventDefault();">
+                            </button>
+                            <button type="button" id="tgt-rec-3r" class="py-1 px-1.5 bg-[#082f49]/50 hover:bg-[#075985] border border-sky-500/30 rounded text-left transition-all text-[9.5px] text-white overflow-hidden shrink-0 cursor-pointer" onclick="event.preventDefault();">
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -567,6 +581,10 @@
                         <div class="flex justify-between items-center text-gray-400 font-medium">
                           <span>規劃賺賠比 (Risk/Reward Ratio):</span>
                           <span id="plan-rr-ratio" class="font-bold text-gray-200 font-mono text-xs">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-400 font-medium">
+                          <span>規劃停損比例 (Stop Loss %):</span>
+                          <span id="plan-stop-pct-display" class="font-bold text-gray-200 font-mono text-xs">--</span>
                         </div>
                         <div class="flex justify-between items-center text-gray-400 font-medium">
                           <span>單筆預期最大損失 (Expected Max Risk):</span>
@@ -1146,6 +1164,7 @@
         settings: { ...DEFAULT_SETTINGS },
         currentTab: 'dashboard',
         editingTradeId: null,
+        lastStopLossViolationType: null,
         logFilter: '全部',
         logSearch: '',
         logSort: 'date-desc',
@@ -1450,6 +1469,70 @@
         localStorage.setItem('momentum_settings', JSON.stringify(state.settings));
         localStorage.setItem('momentum_trades', JSON.stringify(state.trades));
       }
+
+      // Core Wind Control Custom Notification System
+      function showNotification(title, text, type = 'info') {
+        let container = document.getElementById('notification-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'notification-container';
+          container.className = "fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm pointer-events-none font-sans";
+          document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `pointer-events-auto flex flex-col gap-1 p-4 rounded-xl border border-terminal-accent/30 shadow-2xl transition-all duration-300 transform translate-x-12 opacity-0 scale-95 leading-relaxed`;
+        
+        if (type === 'error' || type === 'danger') {
+          toast.className += " bg-red-950/95 text-red-200 border-red-500/50 shadow-red-905/20";
+        } else if (type === 'success') {
+          toast.className += " bg-emerald-955/95 text-emerald-200 border-emerald-500/50 shadow-emerald-905/20";
+        } else if (type === 'warning') {
+          toast.className += " bg-amber-955/95 text-amber-200 border-amber-500/50 shadow-amber-905/20";
+        } else {
+          toast.className += " bg-[#0c1322]/95 text-blue-200 border-terminal-accent/50 shadow-black/40";
+        }
+
+        toast.innerHTML = `
+          <div class="flex items-center justify-between gap-3 border-b border-white/10 pb-1.5 mb-1">
+            <span class="font-bold text-xs tracking-wider uppercase flex items-center gap-1.5">
+              ${type === 'error' ? '🚨 期望值警報' : (type === 'success' ? '✅ 風控檢核核准' : '🔔 系統通知')}
+              ${title}
+            </span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-gray-400 hover:text-white text-xs font-bold cursor-pointer select-none px-1">✕</button>
+          </div>
+          <p class="text-[11px] text-gray-300 font-normal leading-normal select-text">${text}</p>
+        `;
+
+        container.appendChild(toast);
+        
+        // Animate in
+        setTimeout(() => {
+          toast.classList.remove('translate-x-12', 'opacity-0', 'scale-95');
+        }, 10);
+
+        // Auto-fadeout and remove
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.classList.add('translate-x-12', 'opacity-0', 'scale-95');
+            setTimeout(() => toast.remove(), 300);
+          }
+        }, 6000);
+      }
+
+      // Global binding for applying recommended targets
+      window.applySuggestedTarget = function(val) {
+        const planTargetInput = document.getElementById('trade-plan-target');
+        if (planTargetInput) {
+          planTargetInput.value = parseFloat(val).toFixed(1);
+          // Spark visual flash animation
+          planTargetInput.classList.add('bg-profit/10', 'border-profit');
+          setTimeout(() => {
+            planTargetInput.classList.remove('bg-profit/10', 'border-profit');
+          }, 1000);
+          updateFormCalculations();
+        }
+      };
 
       // ==========================================
       // TAB CONTROLLER
@@ -2233,12 +2316,90 @@
           
           let planRiskPoints = 0;
           let planRewardPoints = 0;
+          let stopLossPct = 0;
           
           if (entryPrice > 0 && planStop > 0) {
             planRiskPoints = entryPrice - planStop;
             document.getElementById('plan-risk-points').innerText = `損價差: ${planRiskPoints >= 0 ? '-' : '+'}${Math.abs(planRiskPoints).toFixed(1)} 點`;
+            
+            // Calculate Stop Loss %
+            stopLossPct = (Math.abs(entryPrice - planStop) / entryPrice) * 100;
+            
+            // Set plan stop pct displays
+            document.getElementById('plan-stop-pct-display').innerText = `${stopLossPct.toFixed(2)}%`;
+            
+            const fieldAlert = document.getElementById('stop-loss-pct-field-alert');
+            if (fieldAlert) {
+              fieldAlert.classList.remove('hidden');
+              if (stopLossPct < 3.0) {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
+                fieldAlert.innerText = `⚠️ 停損 ${stopLossPct.toFixed(2)}% < 3% 下限 (太貼近隨機雜訊，極易被洗出場！)`;
+                
+                planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
+                
+                if (state.lastStopLossViolationType !== 'too_narrow') {
+                  state.lastStopLossViolationType = 'too_narrow';
+                  showNotification('初始停損太窄', `目前規劃停損為 ${stopLossPct.toFixed(2)}%，低於風控 3.0% 下限。此設定太貼近日常雜訊，極難累積大波段利潤。`, 'error');
+                }
+              } else if (stopLossPct > 6.0) {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
+                fieldAlert.innerText = `⚠️ 停損 ${stopLossPct.toFixed(2)}% > 6% 上限 (極端肥尾風險，單邊曝險過大！)`;
+                
+                planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
+                
+                if (state.lastStopLossViolationType !== 'too_wide') {
+                  state.lastStopLossViolationType = 'too_wide';
+                  showNotification('初始停損太寬', `目前規劃停損為 ${stopLossPct.toFixed(2)}%，突破風控 6.0% 上限。這將產生極端的肥尾虧損風險，請小心！`, 'error');
+                }
+              } else {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-emerald-950/40 border border-profit/30 text-profit font-semibold";
+                fieldAlert.innerText = `✅ 停損 ${stopLossPct.toFixed(2)}% (符合 3%~6% 黃金期望值區間)`;
+                
+                planStopInput.classList.remove('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
+                
+                if (state.lastStopLossViolationType !== 'good') {
+                  state.lastStopLossViolationType = 'good';
+                  showNotification('風控黃金比例', `規劃初始停損為 ${stopLossPct.toFixed(2)}%，精準座落在 [3.0%~6.0%] 黃金風控區位！符合正期望值。`, 'success');
+                }
+              }
+            }
+            
+            // Suggested target price auto calculation container
+            const suggestContainer = document.getElementById('suggested-target-box');
+            if (suggestContainer && planStop < entryPrice) {
+              suggestContainer.classList.remove('hidden');
+              const suggested2R = entryPrice + 2 * (entryPrice - planStop);
+              const suggested3R = entryPrice + 3 * (entryPrice - planStop);
+              
+              const btn2r = document.getElementById('tgt-rec-2r');
+              const btn3r = document.getElementById('tgt-rec-3r');
+              
+              if (btn2r) {
+                btn2r.innerHTML = `🎯 R:R 1:2 滿足價<br><span class="font-bold text-profit text-[12px] font-mono">${suggested2R.toFixed(1)}</span> (預估 +${(stopLossPct * 2).toFixed(1)}%)`;
+                btn2r.setAttribute('onclick', `event.preventDefault(); window.applySuggestedTarget(${suggested2R})`);
+              }
+              if (btn3r) {
+                btn3r.innerHTML = `🎯 R:R 1:3 黃金期望值<br><span class="font-bold text-sky-400 text-[12px] font-mono">${suggested3R.toFixed(1)}</span> (預估 +${(stopLossPct * 3).toFixed(1)}%)`;
+                btn3r.setAttribute('onclick', `event.preventDefault(); window.applySuggestedTarget(${suggested3R})`);
+              }
+            } else {
+              const suggestContainer = document.getElementById('suggested-target-box');
+              if (suggestContainer) suggestContainer.classList.add('hidden');
+            }
           } else {
             document.getElementById('plan-risk-points').innerText = '--';
+            document.getElementById('plan-stop-pct-display').innerText = '--';
+            const fieldAlert = document.getElementById('stop-loss-pct-field-alert');
+            if (fieldAlert) fieldAlert.classList.add('hidden');
+            
+            const suggestContainer = document.getElementById('suggested-target-box');
+            if (suggestContainer) suggestContainer.classList.add('hidden');
+            
+            planStopInput.classList.remove('border-red-500', 'bg-red-950/40', 'text-red-200');
+            planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
           }
           
           if (entryPrice > 0 && planTarget > 0) {
@@ -2276,16 +2437,24 @@
               alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-red-300 font-semibold text-center";
               alertEl.innerHTML = `❌ <strong>異常：防守價大於或等於進場價！</strong>進場即停損，或因防守無效而極具重倉爆倉風險。`;
             } else {
-              if (riskOfCapitalPct > 2.0) {
-                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
-                alertEl.innerHTML = `⚠️ <strong>警訊：單筆最大風險達 ${riskOfCapitalPct.toFixed(1)}%！</strong>已超越專業風控之 2% 臨界上限。強烈建議：1. 調降進場口數/張數（目前為 ${qty}） 2. 接近支撐位或縮窄防守點以縮減虧損空間。`;
-              } else if (planTarget > 0 && rrVal < 2.0) {
-                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-200 font-medium text-left";
-                alertEl.innerHTML = `⚠️ <strong>警訊：賺賠比過低！</strong>目前規劃風報比僅 ${rrRatioStr}（未達 1:2 合格標準）。代表這筆交易您承擔的風險高於預期收益，請重新評估是否值得出手交易。`;
+              if (stopLossPct < 3.0) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
+                alertEl.innerHTML = `❌ <strong>【核心風控：停損太窄】</strong>初始停損比例為 <span class="font-extrabold text-white text-xs underline">${stopLossPct.toFixed(2)}%</span>（低於 3% 黃金區間下限）。<br>⚠️ <strong>警示：</strong>此設定太貼近市場日常上下波動隨機雜訊，極易被無效洗盤出場，違反期望值風控矩陣！`;
+              } else if (stopLossPct > 6.0) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
+                alertEl.innerHTML = `❌ <strong>【核心風控：停損太寬】</strong>初始停損比例為 <span class="font-extrabold text-white text-xs underline">${stopLossPct.toFixed(2)}%</span>（高於 6% 黃金區間上限）。<br>⚠️ <strong>警示：</strong>此設定引入極端肥尾風險，單邊曝險過大將大幅侵蝕本金恢復力，不符合正期望值資金管理規範！`;
               } else {
-                alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
-                const displayRatioStr = planTarget > 0 ? `賺賠比 ${rrRatioStr}（大於 2.0 優秀）` : '具備清晰防守點';
-                alertEl.innerHTML = `✅ <strong>風控與戰略合格！</strong>${displayRatioStr}，且單筆損失佔總資金僅 ${riskOfCapitalPct.toFixed(1)}% 在 2% 安全邊界內。請在開盤後如實落實本規劃！`;
+                if (riskOfCapitalPct > 2.0) {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
+                  alertEl.innerHTML = `⚠️ <strong>警訊：單筆最大風險達 ${riskOfCapitalPct.toFixed(1)}%！</strong>已超越專業風控之 2% 臨界上限。強烈建議：1. 調降進場口數/張數（目前為 ${qty}） 2. 接近支撐位或縮窄防守點以縮減虧損空間。`;
+                } else if (planTarget > 0 && rrVal < 2.0) {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-200 font-medium text-left";
+                  alertEl.innerHTML = `⚠️ <strong>警訊：賺賠比過低！</strong>目前規劃風報比僅 ${rrRatioStr}（未達 1:2 合格標準）。代表這筆交易您承擔的風險高於預期收益，請重新評估是否與 3%~6% 黃金震盪防守進行最佳化配置。`;
+                } else {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
+                  const displayRatioStr = planTarget > 0 ? `賺賠比 ${rrRatioStr}（大於 2.0 優秀）` : '具備清晰防守點';
+                  alertEl.innerHTML = `✅ <strong>風控與戰略合格！</strong>${displayRatioStr}，且停損比例為 <span class="font-bold underline text-white">${stopLossPct.toFixed(1)}%</span> 完美落在 [3.0% ~ 6.0%] 期望值黃金區間，單筆本金損益比 ${riskOfCapitalPct.toFixed(1)}% 具足長線保護。`;
+                }
               }
             }
           }
@@ -2564,7 +2733,7 @@
         }
       }
 
-      function saveTrade(event) {
+      async function saveTrade(event) {
         event.preventDefault();
 
         const codeInput = document.getElementById('trade-code').value.trim().toUpperCase();
@@ -2581,6 +2750,25 @@
         const fee = parseFloat(document.getElementById('trade-fee').value) || 0;
         const planStop = parseFloat(document.getElementById('trade-plan-stop').value) || 0;
         const planTarget = parseFloat(document.getElementById('trade-plan-target').value) || 0;
+
+        // Strict Expectancy Golden Zone Check [3% ~ 6%] intercept as core wind control soul
+        if (entryPrice > 0 && planStop > 0) {
+          const stopLossPct = (Math.abs(entryPrice - planStop) / entryPrice) * 100;
+          if (stopLossPct < 3.0 || stopLossPct > 6.0) {
+            const rangeMsg = stopLossPct < 3.0 
+              ? `停損比例低於臨界值 (${stopLossPct.toFixed(2)}% < 3.0%)` 
+              : `停損比例高於臨界值 (${stopLossPct.toFixed(2)}% > 6.0%)`;
+            const warningMsg = stopLossPct < 3.0 
+              ? `這極容易貼近日常市場波動隨機雜訊，落入被無效掃出場的隨機陷阱！` 
+              : `這將引入極端的肥尾巨損風險，單筆曝險過高、大幅侵害您帳戶長線正期望值回彈力！`;
+              
+            const isConfirmed = await showCustomConfirm(`🚨 核心風控：期望值不符合警報`, `您設定的初始停損比例為 ${stopLossPct.toFixed(2)}% (${rangeMsg})，未落在 [3.0% ~ 6.0%] 黃金期望值區間內。\n\n⚠️ 原因剖析：\n${warningMsg}\n\n這不符合正期望值矩陣！您確定要硬性繞過此核心系統風控黃金模型、硬性儲存此筆交易嗎？`, "bg-[#d97706] hover:bg-[#b45309]", "確定硬性儲存");
+            if (!isConfirmed) {
+              document.getElementById('trade-plan-stop').focus();
+              return;
+            }
+          }
+        }
 
         let exitDateVal = "";
         let exitPrice = 0;
@@ -2606,7 +2794,7 @@
           const fivePercentOfCapital = initialCapital * 0.05;
 
           if (ratingVal === '🔴壞交易' && netPnL < 0 && Math.abs(netPnL) > fivePercentOfCapital) {
-            const userConfirmed = confirm("⚠️ 此筆損失已達高風險水準，請務必於備註中詳細說明停損未執行的原因。\n\n確定要立即儲存此筆交易嗎？");
+            const userConfirmed = await showCustomConfirm("⚠️ 核心風控：高覆盤曝險警報", "此筆損失已達高風險水準（大於您總資金之 5%），請務必於備註中詳細說明停損未執行的原因。\n\n確定要立即儲存此筆交易嗎？", "bg-loss hover:bg-loss/80", "確定儲存");
             if (!userConfirmed) {
               document.getElementById('trade-note').focus();
               return;
@@ -2797,15 +2985,15 @@
 
             const actionButtons = isClosed 
               ? `
-                  <button onclick="editTrade('${tr.id}')" class="px-2 py-1 text-blue-400 hover:text-white hover:bg-blue-400/20 border border-blue-400/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center gap-1 shrink-0" title="編輯交易">
+                  <button onclick="window.editTrade('${tr.id}', event)" class="px-2 py-1 text-blue-400 hover:text-white hover:bg-blue-400/20 border border-blue-400/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center gap-1 shrink-0" title="編輯交易">
                     <span>✏️</span><span>編輯</span>
                   </button>
                 `
               : `
-                  <button onclick="closeTradeDirect('${tr.id}')" class="px-2 py-1.5 text-warning hover:text-white hover:bg-warning/30 border border-warning/45 bg-warning/5 rounded text-xs font-bold select-none cursor-pointer scale-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1 shrink-0" title="一鍵平倉，記錄賣出資訊">
+                  <button onclick="window.closeTradeDirect('${tr.id}', event)" class="px-2 py-1.5 text-warning hover:text-white hover:bg-warning/30 border border-warning/45 bg-warning/5 rounded text-xs font-bold select-none cursor-pointer scale-100 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1 shrink-0" title="一鍵平倉，記錄賣出資訊">
                     <span>⚡</span><span>平倉</span>
                   </button>
-                  <button onclick="editTrade('${tr.id}')" class="px-1.5 py-1 text-gray-400 hover:text-white hover:bg-terminal-accent/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="編輯基本部位資訊">
+                  <button onclick="window.editTrade('${tr.id}', event)" class="px-1.5 py-1 text-gray-400 hover:text-white hover:bg-terminal-accent/30 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="編輯基本部位資訊">
                     <span>✏️</span>
                   </button>
                 `;
@@ -2837,7 +3025,7 @@
               <td class="px-4 py-4.5 text-center select-none" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-center gap-1.5">
                   ${actionButtons}
-                  <button onclick="deleteTrade('${tr.id}')" class="px-1.5 py-1 text-loss hover:text-white hover:bg-loss/20 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="刪除交易">
+                  <button onclick="window.deleteTrade('${tr.id}', event)" class="px-1.5 py-1 text-loss hover:text-white hover:bg-loss/20 rounded text-xs select-none cursor-pointer transition-all flex items-center justify-center shrink-0" title="刪除交易">
                     <span>🗑️</span>
                   </button>
                 </div>
@@ -3209,20 +3397,113 @@
         }
       }
 
-      function deleteTrade(id) {
+      function showCustomConfirm(title, text, confirmColorClass = "bg-loss hover:bg-loss/80", confirmText = "確定刪除") {
+        return new Promise((resolve) => {
+          let modal = document.getElementById('custom-confirm-modal');
+          if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'custom-confirm-modal';
+            modal.className = "fixed inset-0 z-[10000] hidden flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-all duration-200 opacity-0 pointer-events-none font-sans";
+            
+            modal.innerHTML = `
+              <div class="bg-[#0b101c] border border-terminal-accent/80 rounded-xl shadow-2xl max-w-sm w-full font-sans overflow-hidden transform scale-95 transition-all duration-200">
+                <div class="flex items-center gap-2 bg-[#080d17] border-b border-terminal-accent/30 px-4 py-3 text-white">
+                  <span class="text-warning text-base font-bold select-none">⚠️</span>
+                  <span id="custom-confirm-title" class="font-bold text-xs tracking-wider uppercase font-sans">確認提示</span>
+                </div>
+                <div class="px-5 py-4">
+                  <p id="custom-confirm-message" class="text-xs text-gray-300 leading-relaxed font-normal whitespace-pre-wrap font-sans"></p>
+                </div>
+                <div class="bg-[#080d17] border-t border-terminal-accent/20 px-5 py-3 flex items-center justify-end gap-3">
+                  <button id="custom-confirm-cancel-btn" class="px-3.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-terminal-accent/20 bg-transparent rounded border border-gray-600/40 select-none cursor-pointer font-medium transition-all">
+                    取消
+                  </button>
+                  <button id="custom-confirm-confirm-btn" class="px-3.5 py-1.5 text-xs text-white rounded select-none cursor-pointer font-medium transition-all shadow-md">
+                    確定
+                  </button>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+          }
+
+          document.getElementById('custom-confirm-title').innerText = title;
+          document.getElementById('custom-confirm-message').innerText = text;
+          
+          const confirmBtn = document.getElementById('custom-confirm-confirm-btn');
+          confirmBtn.className = `px-3.5 py-1.5 text-xs text-white rounded select-none cursor-pointer font-medium transition-all shadow-md ${confirmColorClass}`;
+          confirmBtn.innerText = confirmText;
+
+          // Open modal
+          modal.classList.remove('hidden');
+          modal.classList.remove('pointer-events-none');
+          setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+          }, 10);
+
+          let resolved = false;
+
+          const closeAndResolve = (result) => {
+            if (resolved) return;
+            resolved = true;
+            
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+              modal.classList.add('hidden');
+              modal.classList.add('pointer-events-none');
+            }, 200);
+
+            resolve(result);
+          };
+
+          const cancelBtn = document.getElementById('custom-confirm-cancel-btn');
+
+          cancelBtn.onclick = (e) => {
+            e.stopPropagation();
+            closeAndResolve(false);
+          };
+
+          confirmBtn.onclick = (e) => {
+            e.stopPropagation();
+            closeAndResolve(true);
+          };
+
+          modal.onclick = (e) => {
+            if (e.target === modal) {
+              e.stopPropagation();
+              closeAndResolve(false);
+            }
+          };
+        });
+      }
+      window.showCustomConfirm = showCustomConfirm;
+
+      async function deleteTrade(id, event) {
+        if (event && event.stopPropagation) {
+          event.stopPropagation();
+        }
         const tr = state.trades.find(t => t.id === id);
         if (!tr) return;
 
-        const isOk = confirm(`⚠️ 確定要刪除「${tr.code} ${tr.name}」這筆交易覆盤記錄嗎？該操作不可復原。`);
+        const isOk = await showCustomConfirm(`🗑️ 核心風控：確認刪除工作`, `您確定要永久刪除「${tr.code} ${tr.name}」這筆交易覆盤記錄嗎？該操作將不可復原。`);
         if (isOk) {
           state.trades = state.trades.filter(t => t.id !== id);
           saveDataToStorage();
           recalculateCoreStats();
           renderLog();
+          
+          if (typeof showNotification === 'function') {
+            showNotification('🗑️ 刪除成功', `已成功移除「${tr.code} ${tr.name}」的動能期貨覆盤交易明細。`, 'warning');
+          }
         }
       }
 
-      function editTrade(id) {
+      function editTrade(id, event) {
+        if (event && event.stopPropagation) {
+          event.stopPropagation();
+        }
         const tr = state.trades.find(t => t.id === id);
         if (!tr) {
           alert("找不到該筆交易記錄！");
@@ -3334,7 +3615,10 @@
         }
       }
 
-      function closeTradeDirect(id) {
+      function closeTradeDirect(id, event) {
+        if (event && event.stopPropagation) {
+          event.stopPropagation();
+        }
         const tr = state.trades.find(t => t.id === id);
         if (!tr) {
           alert("找不到該筆交易記錄！");
@@ -3375,6 +3659,11 @@
           }
         }, 100);
       }
+
+      // Explicitly register transaction controllers on window scope to ensure 100% robust HTML-inline event triggers
+      window.deleteTrade = deleteTrade;
+      window.editTrade = editTrade;
+      window.closeTradeDirect = closeTradeDirect;
 
       // ==========================================
       // CSV EXPORT / IMPORT PROCEDURES
@@ -3432,7 +3721,7 @@
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
           const text = e.target.result;
           const rows = text.split("\n");
           if (rows.length < 2) {
@@ -3481,7 +3770,7 @@
           }
 
           if (parsedCount > 0) {
-            const isAppend = confirm(`✅ 成功解析 ${parsedCount} 筆交易！\n按下「確定」將合併現有資料。\n按下「取消」將完全覆蓋當前資料。`);
+            const isAppend = await showCustomConfirm(`📥 匯入模式選擇`, `✅ 成功解析 ${parsedCount} 筆交易！\n\n您是否要【合併】這批新交易至現有資料中？\n\n[確定]：與現有交易明細進行合併並儲存\n[取消]：完全覆蓋且取代現有之明細資料`, "bg-terminal-accent hover:bg-terminal-accent/80", "確定合併");
             if (isAppend) {
               state.trades = [...state.trades, ...newTradesList];
             } else {
@@ -3668,8 +3957,8 @@
         switchTab('dashboard');
       }
 
-      function clearTradesOnly() {
-        const doubleCheck = confirm("⚠️ 確定要【清空所有覆盤交易明細】嗎？\n\n這項動作將會把所有歷史紀錄清除歸零，但您的「個人初始帳戶資金等參數設定」仍會被原地保留。讓您直接手動輸入目前的實際持倉！");
+      async function clearTradesOnly() {
+        const doubleCheck = await showCustomConfirm("⚠️ 核心風控：清空覆盤紀錄", "確定要【清空所有覆盤交易明細】嗎？\n\n這項動作將會把所有歷史紀錄清除歸零，但您的「個人初始帳戶資金等參數設定」仍會被原地保留！", "bg-loss hover:bg-loss/80", "確定清空");
         if (doubleCheck) {
           state.trades = [];
           localStorage.setItem('momentum_trades', JSON.stringify([]));
@@ -3679,8 +3968,8 @@
         }
       }
 
-      function restoreDemoTrades() {
-        const confirmRestore = confirm("🔄 您是否要重新載入【系統預設示範覆盤交易紀錄】？\n\n此操作將以系統之示範交易(大聯大期、國巨等)覆蓋您目前的交易。");
+      async function restoreDemoTrades() {
+        const confirmRestore = await showCustomConfirm("🔄 核心風控：還原示範數據", "您是否要重新載入【系統預設示範覆盤交易紀錄】？\n\n此操作將以系統之示範交易(大聯大期、國巨等)覆蓋您目前的交易。", "bg-terminal-accent hover:bg-terminal-accent/80", "確定還原");
         if (confirmRestore) {
           state.trades = [ ...SEED_TRADES ];
           localStorage.setItem('momentum_trades', JSON.stringify(state.trades));
@@ -3690,10 +3979,10 @@
         }
       }
 
-      function wipeAllData() {
-        const first = confirm("⚠️ 確定要刪除所有覆盤交易與個人參數設定（回到出廠空狀態）嗎？\n\n這將完全清除您的瀏覽器本機快取！");
+      async function wipeAllData() {
+        const first = await showCustomConfirm("⚠️ 核心風控：全面重設系統", "確定要刪除所有覆盤交易與個人參數設定（回到出廠空狀態）嗎？\n\n這將完全清除您的瀏覽器本機快取！", "bg-loss hover:bg-loss/80", "下一步確認");
         if (first) {
-          const second = confirm("💥 請再次確認！這將清空所有的資料，這能讓您的系統變成最乾淨的空白平台。確定執行嗎？");
+          const second = await showCustomConfirm("💥 核心風控：終極雙重確認", "請再次確認！這將清空所有的包括個人資金參數在內的全部設定與數據，讓您的系統回到最乾淨的空白出廠平台。確定執行嗎？", "bg-red-650 hover:bg-red-700", "確定重設");
           if (second) {
             localStorage.clear();
             localStorage.setItem('momentum_trades', JSON.stringify([])); // Preserve clean empty trades
