@@ -7,7 +7,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
       
@@ -229,6 +228,31 @@
 
         <div id="tab-dashboard" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+          <!-- Forcing Rest Notification Banner -->
+          <div id="rest-warning-banner" class="lg:col-span-3 hidden">
+            <div class="bg-gradient-to-r from-[#1f1315]/95 via-[#291415]/90 to-[#1f1315]/95 border-l-4 border-loss p-4.5 rounded-r-xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div class="flex items-start gap-4">
+                <span class="text-2xl shrink-0 mt-0.5 select-none">🚨</span>
+                <div>
+                  <h4 class="text-xs font-black text-rose-400 tracking-widest uppercase flex items-center gap-2">
+                    觸發「強制休息」雙重風控極限防禦
+                  </h4>
+                  <p class="text-[11px] text-gray-200 mt-1 leading-relaxed">
+                    偵測到連續進行了 <strong>3 次「🔴壞交易」</strong>，且目前<strong>大數勝率低於 30%</strong>（當前：<span id="rest-winrate-lbl" class="font-bold text-loss">0.0%</span>）。
+                  </p>
+                  <p class="text-[10.5px] text-gray-400 mt-0.5">
+                    這代表您已陷入典型的賭徒反彈與情緒化交易，正失去理性定錨！阿魯米軍師強烈建議您：<strong>立即閉盤關機，強制休息</strong>，靜心冥想一小時以上或明日再戰，徹底隔離市場隨機波動！
+                  </p>
+                </div>
+              </div>
+              <div class="shrink-0 flex items-center gap-2 self-end sm:self-center">
+                <button onclick="takeABreakDismiss()" class="px-3 py-1.5 bg-[#f25f5f]/15 hover:bg-[#f25f5f]/25 text-loss rounded-lg text-xs font-bold border border-loss/35 hover:border-loss cursor-pointer transition-all active:scale-95 select-none">
+                  我已關席，冷靜片刻
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="lg:col-span-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-terminal-card border border-terminal-accent/70 px-5 py-4 rounded-xl shadow-md">
             <div>
               <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -359,9 +383,8 @@
           </div>
         </div>
 
-        <div id="tab-new-trade" class="tab-content hidden max-w-7xl mx-auto space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div class="lg:col-span-12 xl:col-span-7 bg-terminal-card rounded-xl border border-terminal-accent shadow-lg overflow-hidden">
+        <div id="tab-new-trade" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+          <div class="bg-terminal-card rounded-xl border border-terminal-accent shadow-lg overflow-hidden">
             <div class="p-5 border-b border-terminal-accent bg-terminal-accent/10 flex justify-between items-center">
               <div>
                 <h2 id="form-title-h2" class="text-lg font-bold flex items-center gap-2 text-white">
@@ -749,45 +772,10 @@
               </div>
 
             </form>
-          </div> <div class="lg:col-span-12 xl:col-span-5 space-y-6">
-            <div class="bg-terminal-card rounded-xl border border-terminal-accent shadow-lg overflow-hidden p-5 flex flex-col space-y-4" id="form-chart-card">
-              <div class="flex justify-between items-center border-b border-terminal-accent/30 pb-3">
-                <div>
-                  <h3 class="font-bold text-xs flex items-center gap-1.5 text-white">
-                    <span>📊</span> KAMA 系統・動能籌碼真空 K 線圖
-                  </h3>
-                  <p class="text-[10px] text-gray-400 mt-1">即時生成對比 2000 標準點之個股期貨風控預演。滑鼠點擊任意價格解鎖籌碼真空區期望分析！</p>
-                </div>
-              </div>
-              
-              <div class="relative w-full h-[330px] bg-[#090e18] rounded-xl overflow-hidden border border-terminal-accent/60" id="form-chart-container-wrapper">
-                <div id="form-chart-viewport" class="w-full h-full"></div>
-                <canvas id="form-chart-overlay-canvas" class="absolute inset-0 pointer-events-none z-10"></canvas>
-                <div id="form-chart-warning-badge" class="absolute top-2.5 left-2.5 bg-red-950/80 border border-loss/60 text-loss text-[10px] font-bold px-2.5 py-1 rounded select-none hidden animate-pulse">
-                  🚨 戰術防守違規，不符合設定框架！
-                </div>
-              </div>
-              
-              <div class="bg-[#0b101c] border border-terminal-accent/40 rounded-xl p-4 space-y-2.5 text-xs text-gray-300">
-                <div class="text-[11px] font-bold text-gray-200 flex items-center gap-1.5">
-                  <span>⚡</span> 密集大山雷達與真空決策
-                </div>
-                <div class="grid grid-cols-2 gap-3 text-[11.5px] font-mono leading-relaxed">
-                  <div class="bg-terminal-bg/55 p-2 rounded border border-terminal-accent/20">
-                    <span class="text-gray-500 block text-[9px] mb-0.5">大山頂部/密集區 (POC)</span>
-                    <span class="text-sky-300 font-bold block" id="radar-poc-price">--</span>
-                  </div>
-                  <div class="bg-terminal-bg/55 p-2 rounded border border-terminal-accent/20">
-                    <span class="text-gray-500 block text-[9px] mb-0.5">防守位 vs 籌碼密集區</span>
-                    <span class="text-profit font-semibold block text-[10.5px]" id="radar-stop-assessment">請填入防守價...</span>
-                  </div>
-                </div>
-                <div class="text-[10.5px] leading-relaxed text-gray-400 font-sans border-t border-terminal-accent/20 pt-2 flex gap-1.5 items-start">
-                  <span>💡</span> <span>在阿魯米系統中，建立長線期望值必須<strong>「站在籌碼密集大山頂部做防守」</strong>。也就是說，您的停損防守價，應該設定在最大量累積區 (POC) 的上緣，這樣當價格回測獲得強力支撐時，就不會輕易被洗出場！</span>
-                 </div>
-              </div>
-            </div>
-          </div> </div> </div> <div id="tab-log" class="tab-content hidden space-y-6">
+          </div>
+        </div>
+
+        <div id="tab-log" class="tab-content hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             
             <div class="lg:col-span-1 bg-terminal-card border border-terminal-accent rounded-xl p-4 shadow-lg flex flex-col space-y-4">
@@ -1203,7 +1191,8 @@
         calendarYear: new Date().getFullYear(),
         calendarMonth: new Date().getMonth(),
         selectedProduct: null,
-        charts: { mini: null, large: null, mental: null, strategy: null, expectedValueSparkline: null }
+        charts: { mini: null, large: null, mental: null, strategy: null, expectedValueSparkline: null },
+        dismissedRestWarning: false
       };
 
       const SAMPLE_CODE_MAP = {
@@ -1504,6 +1493,28 @@
       // TAB 1: DASHBOARD RENDERER
       // ==========================================
       function renderDashboard() {
+        // Evaluate "強制休息" status warning
+        const sortedChrono = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id.localeCompare(b.id));
+        let triggerRest = false;
+        if (sortedChrono.length >= 3) {
+          const last3 = sortedChrono.slice(-3);
+          const allBad = last3.every(tr => tr.rating === '🔴壞交易');
+          const winRateTooLow = statsCache.winRate < 0.3;
+          if (allBad && winRateTooLow) {
+            triggerRest = true;
+          }
+        }
+        
+        const restBanner = document.getElementById('rest-warning-banner');
+        if (restBanner) {
+          if (triggerRest && !state.dismissedRestWarning) {
+            document.getElementById('rest-winrate-lbl').innerText = (statsCache.winRate * 100).toFixed(1) + "%";
+            restBanner.classList.remove('hidden');
+          } else {
+            restBanner.classList.add('hidden');
+          }
+        }
+
         document.getElementById('dashboard-good-count').innerText = statsCache.goodCount;
         document.getElementById('dashboard-bad-count').innerText = statsCache.badCount;
 
@@ -2173,38 +2184,27 @@
             const fieldAlert = document.getElementById('stop-loss-pct-field-alert');
             fieldAlert.classList.remove('hidden');
 
-            // --- 冷血軍師核心：雙軌制動態停損矩陣 ---
-            if (position === '獨立新倉' || position.includes('加碼')) {
-                // Strict rule: 1.0% to 2.5%
-                if (stopLossPct < 1.0 || stopLossPct > 2.5) {
-                    fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
-                    fieldAlert.innerText = `⚠️ 獨立新倉/加碼的停損比為 ${stopLossPct.toFixed(2)}%：戰術防守違規，不符合設定框架！`;
-                    planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
-                    planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
-                } else {
-                    fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-emerald-950/40 border border-profit/30 text-profit font-semibold";
-                    fieldAlert.innerText = `✅ [B軌短線與加碼] 停損結構完美執行 (${stopLossPct.toFixed(2)}%)`;
-                    planStopInput.classList.remove('border-red-500', 'bg-red-955/40', 'text-red-200');
-                    planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
-                }
+            // --- 冷血軍師核心：動態停損矩陣 ---
+            if (stopLossPct < 1.5) {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
+                fieldAlert.innerText = `⚠️ 【太貼近隨機雜訊】停損 ${stopLossPct.toFixed(2)}% < 1.5% 下限，極易被隨機雜訊洗出場！`;
+                planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
+            } else if (stopLossPct > 6.0) {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
+                fieldAlert.innerText = `⚠️ 【肥尾風險】停損 ${stopLossPct.toFixed(2)}% > 6.0% 上限，單邊曝險過大，引入極端肥尾風險！`;
+                planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
+            } else if (stopLossPct <= 2.5) {
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-emerald-950/40 border border-profit/30 text-profit font-semibold";
+                fieldAlert.innerText = `✅ [嚴格結構防守] 停損結構完美執行 (${stopLossPct.toFixed(2)}%)，符合 1.5% ~ 2.5% 防守點位`;
+                planStopInput.classList.remove('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
             } else {
-                // Bottom position: 3.0% to 6.0%
-                if (stopLossPct < 3.0) {
-                    fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
-                    fieldAlert.innerText = `⚠️ 【太貼近隨機雜訊】停損 ${stopLossPct.toFixed(2)}% < 3% 下限，極易被隨機雜訊洗出場！`;
-                    planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
-                    planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
-                } else if (stopLossPct > 6.0) {
-                    fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
-                    fieldAlert.innerText = `⚠️ 【肥尾風險】停損 ${stopLossPct.toFixed(2)}% > 6% 上限，單邊曝險過大，引入極端肥尾風險！`;
-                    planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
-                    planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
-                } else {
-                    fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-emerald-950/40 border border-profit/30 text-profit font-semibold";
-                    fieldAlert.innerText = `✅ [A軌波段底倉] 停損符合 3%~6% 期望值黃金區間 (${stopLossPct.toFixed(2)}%)`;
-                    planStopInput.classList.remove('border-red-500', 'bg-red-955/40', 'text-red-200');
-                    planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
-                }
+                fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-emerald-950/40 border border-profit/30 text-profit font-semibold";
+                fieldAlert.innerText = `✅ [阿魯米黃金期望值] 停損符合 3%~6% 期望值黃金區間 (${stopLossPct.toFixed(2)}%)`;
+                planStopInput.classList.remove('border-red-500', 'bg-red-955/40', 'text-red-200');
+                planStopInput.classList.add('border-terminal-accent', 'focus:border-profit');
             }
 
             const suggestContainer = document.getElementById('suggested-target-box');
@@ -2270,35 +2270,25 @@
               alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-red-300 font-semibold text-center";
               alertEl.innerHTML = `❌ <strong>異常：防守價大於或等於進場價！</strong>進場即停損，極具爆倉風險。`;
             } else {
-              // Master check
-              if (position === '獨立新倉' || position.includes('加碼')) {
-                  if (stopLossPct < 1.0 || stopLossPct > 2.5) {
-                      alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
-                      alertEl.innerHTML = `🚨 <strong>戰術防守違規，不符合設定框架！</strong>獨立新倉/加碼的停損比為 ${stopLossPct.toFixed(2)}%，未死守在 [1.0% 到 2.5%] 區間內！`;
-                  } else {
-                      alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
-                      alertEl.innerHTML = `✅ <strong>防守合格！</strong>2% 新倉/加碼結構防守完美執行 (${stopLossPct.toFixed(2)}%)。`;
-                  }
+              if (stopLossPct < 1.5) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
+                alertEl.innerHTML = `❌ <strong>【太貼近隨機雜訊】</strong>初始停損僅 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 停損必須落在 [1.5% 到 6.0%]。過窄極易被隨機噪音洗出場。`;
+              } else if (stopLossPct > 6.0) {
+                alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
+                alertEl.innerHTML = `❌ <strong>【肥尾風險】</strong>初始停損高達 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 停損上限為 6.0%。過寬將暴露於極端單邊爆倉肥尾風險！`;
               } else {
-                  if (stopLossPct < 3.0) {
-                    alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
-                    alertEl.innerHTML = `❌ <strong>【太貼近隨機雜訊】</strong>初始停損僅 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 波段底倉停損必須落在 [3.0% 到 6.0%]。過窄極易被隨機噪音洗出場。`;
-                  } else if (stopLossPct > 6.0) {
-                    alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
-                    alertEl.innerHTML = `❌ <strong>【肥尾風險】</strong>初始停損高達 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 波段底倉停損上限為 6.0%。過寬將暴露於極端單邊爆倉肥尾風險！`;
-                  } else {
-                    if (riskOfCapitalPct > 2.0) {
-                      alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
-                      alertEl.innerHTML = `⚠️ <strong>警訊：單筆最大風險達 ${riskOfCapitalPct.toFixed(1)}%！</strong>已超越風險臨界值 2.0%。強烈建議減少交易口數。`;
-                    } else if (planTarget > 0 && rrVal < 2.0) {
-                      alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-200 font-medium text-left";
-                      alertEl.innerHTML = `⚠️ <strong>警訊：賺賠比過低！</strong>風報比 ${rrRatioStr}（未達黃金 1:2 標準）。建議重新校準。`;
-                    } else {
-                      alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
-                      const displayRatioStr = planTarget > 0 ? `賺賠比 ${rrRatioStr}（優秀）` : '具備清晰防守點';
-                      alertEl.innerHTML = `✅ <strong>底倉戰略合格！</strong>${displayRatioStr}，停損落在 [3.0% ~ 6.0%] 黃金期望值區間 (${stopLossPct.toFixed(2)}%)。`;
-                    }
-                  }
+                if (riskOfCapitalPct > 2.0) {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
+                  alertEl.innerHTML = `⚠️ <strong>警訊：單筆最大風險達 ${riskOfCapitalPct.toFixed(1)}%！</strong>已超越風險臨界值 2.0%。強烈建議減少交易口數。`;
+                } else if (planTarget > 0 && rrVal < 2.0) {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-amber-950/40 rounded-lg border border-amber-500/30 text-amber-200 font-medium text-left";
+                  alertEl.innerHTML = `⚠️ <strong>警訊：賺賠比過低！</strong>風報比 ${rrRatioStr}（未達黃金 1:2 標準）。建議重新校準。`;
+                } else {
+                  alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-green-950/40 rounded-lg border border-profit/30 text-profit font-semibold text-left";
+                  const displayRatioStr = planTarget > 0 ? `賺賠比 ${rrRatioStr}（優秀）` : '具備清晰防守點';
+                  const strategyName = stopLossPct <= 2.5 ? "嚴格結構防守" : "阿魯米黃金期望值";
+                  alertEl.innerHTML = `✅ <strong>防守合格（${strategyName}）！</strong>${displayRatioStr}，停損落在 [1.5% ~ 6.0%] 黃金期望值合理範圍 (${stopLossPct.toFixed(2)}%)。`;
+                }
               }
             }
           }
@@ -2366,17 +2356,13 @@
         let stopLossViolationReason = "";
 
         if (stopLossPctForRating !== 0) {
-          if (position === '獨立新倉' || position.includes('加碼')) {
-              if (stopLossPctForRating < 1.0 || stopLossPctForRating > 2.5) {
-                  isStopLossViolated = true;
-                  stopLossViolationReason = `獨立新倉與加碼的停損比為 ${stopLossPctForRating.toFixed(2)}%，未落在 [1.0% ~ 2.5%] 之間`;
-              }
-          } else {
-              if (stopLossPctForRating < 3.0 || stopLossPctForRating > 6.0) {
-                  isStopLossViolated = true;
-                  stopLossViolationReason = `底倉的停損比為 ${stopLossPctForRating.toFixed(2)}%，未落在 [3.0% ~ 6.0%] 黃金區間內`;
-              }
-          }
+            if (stopLossPctForRating < 1.5) {
+                isStopLossViolated = true;
+                stopLossViolationReason = `停損比為 ${stopLossPctForRating.toFixed(2)}%，未達 1.5% 最低下限（極易被隨機噪音洗出場）`;
+            } else if (stopLossPctForRating > 6.0) {
+                isStopLossViolated = true;
+                stopLossViolationReason = `停損比為 ${stopLossPctForRating.toFixed(2)}%，超過 6.0% 上限（單邊曝險過大，引起極端肥尾風險）`;
+            }
         }
 
         if (isEmotional || isStopLossViolated) {
@@ -2393,12 +2379,24 @@
           }
         } else if (!isClosed) {
             computedRating = "🟢好交易";
-            ratingReason = `【持倉觀察中】身心冷靜、紀律完好。請日後落實停利停損。估值定錨: ${peAnchor}`;
+            let strategyName = "風控合理";
+            if (stopLossPctForRating >= 1.5 && stopLossPctForRating <= 2.5) {
+              strategyName = "嚴格結構防守";
+            } else if (stopLossPctForRating >= 3.0 && stopLossPctForRating <= 6.0) {
+              strategyName = "阿魯米黃金期望值";
+            }
+            ratingReason = `【持倉觀察中】身心冷靜、紀律完好 (${strategyName})。請日後落實停利停損。估值定錨: ${peAnchor}`;
             ratingBadgeClass = "bg-blue-950/40 border border-blue-500/30 text-blue-300";
             ratingEmoji = "⏳";
         } else {
             computedRating = "🟢好交易";
-            ratingReason = `【符合框架】身心冷靜、風險控制符合期貨動能核心紀律 (${stopLossPctForRating > 0 ? stopLossPctForRating.toFixed(2) + '%' : '已設定'})。估值定錨: ${peAnchor}`;
+            let strategyName = "風控合理";
+            if (stopLossPctForRating >= 1.5 && stopLossPctForRating <= 2.5) {
+              strategyName = "嚴格結構防守";
+            } else if (stopLossPctForRating >= 3.0 && stopLossPctForRating <= 6.0) {
+              strategyName = "阿魯米黃金期望值";
+            }
+            ratingReason = `【符合框架】身心冷靜、風險控制符合期貨動能核心紀律 (${strategyName}，停損比: ${stopLossPctForRating > 0 ? stopLossPctForRating.toFixed(2) + '%' : '已設定'})。估值定錨: ${peAnchor}`;
             ratingBadgeClass = "bg-green-950/40 border border-profit/30 text-profit";
             ratingEmoji = "🟢";
         }
@@ -2430,7 +2428,6 @@
           }
         }
 
-        if (typeof refreshFormKLineChart === 'function') refreshFormKLineChart();
         if (typeof updateAutoPositionSizing === 'function') updateAutoPositionSizing();
       }
 
@@ -2738,6 +2735,7 @@
           saveDataToStorage();
         }
 
+        state.dismissedRestWarning = false;
         const wasEditing = !!state.editingTradeId;
         clearTradeForm();
         switchTab(wasEditing ? 'log' : 'dashboard');
@@ -2838,8 +2836,8 @@
             trDetail.innerHTML = `
               <td colspan="10" class="p-5 border-l-2 border-terminal-accent whitespace-normal">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                  <!-- Left Specs Column: lg:col-span-4 -->
-                  <div class="lg:col-span-4 space-y-4">
+                  <!-- Left Specs Column: lg:col-span-6 -->
+                  <div class="lg:col-span-6 space-y-4">
                     <div class="space-y-1.5 text-xs text-gray-300">
                       <div class="flex items-center gap-1 text-[11px] font-bold text-gray-400 border-b border-terminal-accent/30 pb-1 uppercase font-mono tracking-wider">
                         <span>📋</span> 交易基本規格
@@ -2904,22 +2902,13 @@
                     </div>
                   </div>
 
-                  <!-- Middle Comments Column: lg:col-span-3 -->
-                  <div class="lg:col-span-3 flex flex-col justify-between space-y-4">
+                  <!-- Middle Comments Column: lg:col-span-6 -->
+                  <div class="lg:col-span-6 flex flex-col justify-between space-y-4">
                     <div class="space-y-1.5 flex-1 flex flex-col">
                       <span class="text-gray-500 font-bold text-[11px] block border-b border-terminal-accent/30 pb-1 uppercase font-mono tracking-wider">💬 軍師覆盤與檢討說明</span>
                       <div class="bg-terminal-bg/50 p-3 rounded-lg border border-terminal-accent/40 italic text-xs leading-relaxed text-gray-300 flex-1 min-h-[90px]">
                         ${tr.note || '無填寫備註。這不利於精進，請確實覆盤記錄！'}
                       </div>
-                    </div>
-                  </div>
-
-                  <!-- Right Chart Column: lg:col-span-5 -->
-                  <div class="lg:col-span-5 flex flex-col space-y-2">
-                    <span class="text-gray-500 font-bold text-[11px] block border-b border-terminal-accent/30 pb-1 uppercase font-mono tracking-wider">📊 契合歷史點位與 K 線籌碼大山</span>
-                    <div class="relative w-full h-[220px] bg-[#090e18] rounded-xl overflow-hidden border border-terminal-accent/50" id="hist-chart-container-wrapper-${tr.id}">
-                      <div id="hist-chart-viewport-${tr.id}" class="w-full h-full"></div>
-                      <canvas id="hist-chart-overlay-canvas-${tr.id}" class="absolute inset-0 pointer-events-none z-10"></canvas>
                     </div>
                   </div>
                 </div>
@@ -2987,42 +2976,6 @@
         }
       }
 
-      window.historicalCharts = window.historicalCharts || {};
-
-      function renderHistoricalChart(tradeId) {
-        const tr = state.trades.find(t => t.id === tradeId);
-        if (!tr) return;
-        
-        const containerId = `hist-chart-viewport-${tradeId}`;
-        const canvasId = `hist-chart-overlay-canvas-${tradeId}`;
-        const viewport = document.getElementById(containerId);
-        if (!viewport) return;
-        
-        // Cleanup existing chart first
-        if (window.historicalCharts[tradeId]) {
-          try {
-            window.historicalCharts[tradeId].cleanUp();
-          } catch (e) {
-            console.error(e);
-          }
-          delete window.historicalCharts[tradeId];
-        }
-        
-        const instance = createModularKLineChart({
-          containerId: containerId,
-          canvasId: canvasId,
-          productCode: tr.code,
-          entryPrice: tr.entryPrice,
-          stopLossPrice: tr.planStop,
-          targetPrice: tr.planTarget
-        });
-        
-        if (instance) {
-          window.historicalCharts[tradeId] = instance;
-        }
-      }
-      window.renderHistoricalChart = renderHistoricalChart;
-
       function applyExpectancyMatrixRecommendation(id, newStopPrice) {
         const tr = state.trades.find(t => t.id === id);
         if (!tr) return;
@@ -3051,20 +3004,9 @@
         if (rowDetail.classList.contains('hidden')) {
           rowDetail.classList.remove('hidden'); 
           indicator.innerText = "▼";
-          setTimeout(() => {
-            renderHistoricalChart(id);
-          }, 60);
         } else {
           rowDetail.classList.add('hidden'); 
           indicator.innerText = "▶";
-          if (window.historicalCharts[id]) {
-            try {
-              window.historicalCharts[id].cleanUp();
-            } catch (e) {
-              console.error(e);
-            }
-            delete window.historicalCharts[id];
-          }
         }
       }
 
@@ -3129,175 +3071,18 @@
       }
       window.showCustomConfirm = showCustomConfirm;
 
-      // ==========================================
-      // KAMA SYSTEM: MODULAR K-LINE & CHIP MOUNTAIN ENGINE
-      // ==========================================
-      function generateProceduralKLines(seedCode, basePrice = 100, count = 80) {
-        let seed = 1337; for (let i = 0; i < seedCode.length; i++) seed += seedCode.charCodeAt(i) * (i + 13);
-        function pseudoRandom() { let x = Math.sin(seed++) * 10000; return x - Math.floor(x); }
-        let price = basePrice * 0.94; if (price < 5) price = 100;
-        let data = []; let currentDate = new Date(); currentDate.setDate(currentDate.getDate() - count);
-        for (let i = 0; i < count; i++) {
-          let trend = Math.sin(i / 10 + (seed % 5)) * 1.5 + (pseudoRandom() - 0.48) * 3.5;
-          let open = price; let close = Math.max(2, price + trend);
-          let high = Math.max(open, close) + pseudoRandom() * 2.2;
-          let low = Math.max(1, Math.min(open, close) - pseudoRandom() * 2.2);
-          price = close;
-          data.push({ time: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`, open: Number(open.toFixed(1)), high: Number(high.toFixed(1)), low: Number(low.toFixed(1)), close: Number(close.toFixed(1)), volume: Math.floor(800 + pseudoRandom() * 4500 + Math.abs(trend) * 1200) });
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-        return data;
-      }
 
-      function calculateVolumeProfile(klines, numBins = 24) {
-        let minPrice = Math.min(...klines.map(k=>k.low)), maxPrice = Math.max(...klines.map(k=>k.high));
-        const binSize = ((maxPrice - minPrice) / numBins) || 1;
-        const bins = Array.from({ length: numBins }, (_, idx) => ({ low: minPrice + idx * binSize, high: minPrice + (idx + 1) * binSize, volume: 0 }));
-        klines.forEach(k => {
-          bins.forEach(bin => {
-            const overlapLow = Math.max(bin.low, k.low), overlapHigh = Math.min(bin.high, k.high);
-            if (overlapHigh > overlapLow) bin.volume += k.volume * ((overlapHigh - overlapLow) / (k.high - k.low || 0.1));
-          });
-        });
-        return { bins, minPrice, maxPrice, binSize };
-      }
-
-      window.formChartState = { chart: null, series: null, volumeProfile: null, canvas: null, clickedPriceInfo: null, entryPrice: 0, stopLossPrice: 0, targetPrice: 0, productCode: "", cleanUp: null };
-
-      function paintOverlayCanvas(args) {
-        const { canvas, chart, series, volumeProfile, entryPrice, stopLossPrice, targetPrice, clickedPriceInfo } = args;
-        if (!canvas || !chart || !series) return;
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width; canvas.height = rect.height;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const plotWidth = canvas.width - 55; 
-
-        if (volumeProfile && volumeProfile.bins) {
-          const maxVolume = Math.max(...volumeProfile.bins.map(b => b.volume)) || 1;
-          volumeProfile.bins.forEach(bin => {
-            const yHigh = series.priceToCoordinate(bin.high), yLow = series.priceToCoordinate(bin.low);
-            if (yHigh !== null && yLow !== null) {
-              const height = Math.abs(yLow - yHigh), barWidth = (bin.volume / maxVolume) * (plotWidth * 0.38);
-              ctx.fillStyle = bin.volume === maxVolume ? 'rgba(14, 165, 233, 0.32)' : 'rgba(14, 165, 233, 0.16)';
-              ctx.fillRect(0, yHigh, barWidth, height);
-            }
-          });
-        }
-
-        if (targetPrice > 0) {
-          const yTarget = series.priceToCoordinate(targetPrice);
-          if (yTarget !== null) {
-            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.3; ctx.setLineDash([5, 4]);
-            ctx.beginPath(); ctx.moveTo(0, yTarget); ctx.lineTo(plotWidth, yTarget); ctx.stroke(); ctx.setLineDash([]);
-          }
-        }
-        if (entryPrice > 0) {
-          const yEntry = series.priceToCoordinate(entryPrice);
-          if (yEntry !== null) {
-            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.25;
-            ctx.beginPath(); ctx.moveTo(0, yEntry); ctx.lineTo(plotWidth, yEntry); ctx.stroke();
-          }
-        }
-        if (entryPrice > 0 && stopLossPrice > 0) {
-          const yEntry = series.priceToCoordinate(entryPrice);
-          const yStop = series.priceToCoordinate(stopLossPrice);
-          if (yEntry !== null && yStop !== null) {
-            const yTop = Math.min(yEntry, yStop);
-            const height = Math.abs(yStop - yEntry);
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
-            ctx.fillRect(0, yTop, plotWidth, height);
-
-            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]);
-            ctx.beginPath(); ctx.moveTo(0, yStop); ctx.lineTo(plotWidth, yStop); ctx.stroke(); ctx.setLineDash([]);
-          }
-        }
-      }
-
-      function createModularKLineChart(options) {
-        if (!window.LightweightCharts) return null;
-        const { containerId, canvasId, productCode, entryPrice, stopLossPrice, targetPrice } = options;
-        const viewport = document.getElementById(containerId), canvas = document.getElementById(canvasId);
-        if (!viewport || !canvas) return null;
-        viewport.innerHTML = '';
-        
-        let baseRefPrice = parseFloat(entryPrice) || 120;
-        const candles = generateProceduralKLines(productCode || "DEMO", baseRefPrice, 80);
-        const volumeProfile = calculateVolumeProfile(candles, 24);
-
-        if (volumeProfile && volumeProfile.bins && volumeProfile.bins.length > 0) {
-          const maxVolumeBin = volumeProfile.bins.reduce((p, c) => (c.volume > p.volume) ? c : p, volumeProfile.bins[0]);
-          if (maxVolumeBin) {
-            const pocPrice = (maxVolumeBin.low + maxVolumeBin.high) / 2;
-            const radarPoc = document.getElementById('radar-poc-price');
-            if (radarPoc) radarPoc.innerText = `${pocPrice.toFixed(1)} 點`;
-            const radarAssessment = document.getElementById('radar-stop-assessment');
-            if (radarAssessment) {
-              if (stopLossPrice <= 0) { radarAssessment.innerText = "請在左側規劃防守價..."; radarAssessment.className = "text-gray-500 block text-[10.5px] font-sans"; }
-              else if (stopLossPrice >= pocPrice) { radarAssessment.innerText = "🛡️ 紀律合格：防守在大山之上"; radarAssessment.className = "text-profit font-bold block text-[10.5px] font-sans"; }
-              else { radarAssessment.innerText = "⚠️ 警惕：防守暴露在大山下方"; radarAssessment.className = "text-[#f43f5e] font-bold block text-[10.5px] font-sans animate-pulse-subtle"; }
-            }
-          }
-        }
-
-        const chart = LightweightCharts.createChart(viewport, {
-          layout: { background: { type: LightweightCharts.ColorType.Solid, color: '#090e18' }, textColor: '#94a3b8' },
-          grid: { vertLines: { color: 'rgba(51, 65, 85, 0.15)' }, horzLines: { color: 'rgba(51, 65, 85, 0.15)' } },
-          rightPriceScale: { visible: true }, timeScale: { visible: true }
-        });
-        let candleSeries;
-        const seriesOptions = { upColor: '#10b981', downColor: '#ef4444', borderVisible: false, wickUpColor: '#10b981', wickDownColor: '#ef4444' };
-        if (typeof chart.addCandlestickSeries === 'function') {
-          candleSeries = chart.addCandlestickSeries(seriesOptions);
-        } else if (typeof chart.addSeries === 'function') {
-          // Fallback for v4.2+ / v5+ where addCandlestickSeries might be removed
-          const seriesType = LightweightCharts.CandlestickSeries || 'Candlestick';
-          candleSeries = chart.addSeries(seriesType, seriesOptions);
-        } else {
-          throw new Error("Unable to create candlestick series: neither addCandlestickSeries nor addSeries is supported.");
-        }
-        candleSeries.setData(candles); chart.timeScale().fitContent();
-
-        const painter = () => paintOverlayCanvas({ canvas, chart, series: candleSeries, volumeProfile, entryPrice, stopLossPrice, targetPrice });
-        chart.timeScale().subscribeVisibleLogicalRangeChange(painter);
-        
-        const resizeDetector = new ResizeObserver(() => { const rect = viewport.getBoundingClientRect(); if (rect.width > 10 && rect.height > 10) { chart.resize(rect.width, rect.height); painter(); } });
-        resizeDetector.observe(viewport);
-
-        chart.subscribeClick((param) => {
-          if (!param || !param.point) return;
-          const clickPrice = candleSeries.coordinateToPrice(param.point.y);
-          if (clickPrice === null || clickPrice <= 0) return;
-          const planTargetInput = document.getElementById('trade-plan-target');
-          if (planTargetInput) { planTargetInput.value = (clickPrice * 1.05).toFixed(1); updateFormCalculations(); }
-        });
-
-        setTimeout(painter, 30);
-        return { chart, series: candleSeries, volumeProfile, painter, cleanUp: () => { resizeDetector.disconnect(); chart.remove(); } };
-      }
-
-      function refreshFormKLineChart() {
-        const codeVal = document.getElementById('trade-code')?.value.trim().toUpperCase() || "DEMO";
-        const entryPrice = parseFloat(document.getElementById('trade-entry-price')?.value) || 0;
-        const stopPrice = parseFloat(document.getElementById('trade-plan-stop')?.value) || 0;
-        const targetPrice = parseFloat(document.getElementById('trade-plan-target')?.value) || 0;
-
-        if (window.formChartState.productCode !== codeVal || !window.formChartState.chart) {
-          if (window.formChartState.cleanUp) window.formChartState.cleanUp();
-          window.formChartState.productCode = codeVal;
-          const instance = createModularKLineChart({ containerId: "form-chart-viewport", canvasId: "form-chart-overlay-canvas", productCode: codeVal, entryPrice, stopLossPrice: stopPrice, targetPrice });
-          if (instance) { Object.assign(window.formChartState, { chart: instance.chart, series: instance.series, volumeProfile: instance.volumeProfile, cleanUp: instance.cleanUp }); }
-        } else {
-          window.formChartState.entryPrice = entryPrice; window.formChartState.stopLossPrice = stopPrice; window.formChartState.targetPrice = targetPrice;
-          paintOverlayCanvas({ canvas: document.getElementById('form-chart-overlay-canvas'), chart: window.formChartState.chart, series: window.formChartState.series, volumeProfile: window.formChartState.volumeProfile, entryPrice, stopLossPrice: stopPrice, targetPrice });
-        }
-      }
-      window.refreshFormKLineChart = refreshFormKLineChart;
 
       async function deleteTrade(id, event) {
         if (event) event.stopPropagation();
         const isOk = await showCustomConfirm(`🗑️ 確認刪除工作`, `您確定要永久刪除此筆覆盤記錄嗎？`);
-        if (isOk) { state.trades = state.trades.filter(t => t.id !== id); saveDataToStorage(); recalculateCoreStats(); renderLog(); }
+        if (isOk) {
+          state.trades = state.trades.filter(t => t.id !== id);
+          state.dismissedRestWarning = false;
+          saveDataToStorage();
+          recalculateCoreStats();
+          renderLog();
+        }
       }
 
       function editTrade(id, event) {
@@ -3331,7 +3116,12 @@
         if (!document.getElementById('trade-exit-date').value) document.getElementById('trade-exit-date').value = getTodayDateString();
         setTimeout(() => { document.getElementById('trade-exit-price').focus(); }, 100);
       }
-      window.deleteTrade = deleteTrade; window.editTrade = editTrade; window.closeTradeDirect = closeTradeDirect;
+      function takeABreakDismiss() {
+        state.dismissedRestWarning = true;
+        const banner = document.getElementById('rest-warning-banner');
+        if (banner) banner.classList.add('hidden');
+      }
+      window.deleteTrade = deleteTrade; window.editTrade = editTrade; window.closeTradeDirect = closeTradeDirect; window.takeABreakDismiss = takeABreakDismiss;
 
       // ==========================================
       // CSV EXPORT / IMPORT PROCEDURES
@@ -3345,19 +3135,280 @@
         const link = document.createElement("a"); link.setAttribute("href", URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }))); link.setAttribute("download", `動能覆盤_${getTodayDateString()}.csv`); link.click();
       }
 
+      function parseCSVText(csvText) {
+        const rows = csvText.split(/\r?\n/);
+        if (rows.length < 2) return [];
+
+        let parsedTrades = [];
+        const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const headerIndex = {
+          id: headers.findIndex(h => h.toLowerCase().includes("id")),
+          code: headers.findIndex(h => h.includes("商品") || h.includes("代號") || h.toLowerCase().includes("code")),
+          name: headers.findIndex(h => h.includes("名稱") || h.includes("中文") || h.toLowerCase().includes("name")),
+          position: headers.findIndex(h => h.includes("屬性") || h.includes("部位") || h.toLowerCase().includes("position")),
+          peAnchor: headers.findIndex(h => h.includes("估值") || h.includes("定錨") || h.toLowerCase().includes("peanchor") || h.toLowerCase().includes("pe_anchor")),
+          entryDate: headers.findIndex(h => h.includes("進場日期") || h.toLowerCase().includes("entrydate") || h.toLowerCase().includes("entry_date")),
+          entryPrice: headers.findIndex(h => h.includes("進場價") || h.toLowerCase().includes("entryprice") || h.toLowerCase().includes("entry_price")),
+          exitDate: headers.findIndex(h => h.includes("出場日期") || h.toLowerCase().includes("exitdate") || h.toLowerCase().includes("exit_date")),
+          exitPrice: headers.findIndex(h => h.includes("出場價") || h.toLowerCase().includes("exitprice") || h.toLowerCase().includes("exit_price")),
+          qty: headers.findIndex(h => h.includes("口數") || h.includes("數量") || h.toLowerCase().includes("qty")),
+          planStop: headers.findIndex(h => h.includes("防守") || h.toLowerCase().includes("stop") || h.toLowerCase().includes("plan_stop")),
+          planTarget: headers.findIndex(h => h.includes("目標") || h.toLowerCase().includes("target") || h.toLowerCase().includes("plan_target")),
+          netPnL: headers.findIndex(h => h.includes("淨損益") || h.includes("損益") || h.toLowerCase().includes("pnl") || h.toLowerCase().includes("net_pnl")),
+          rating: headers.findIndex(h => h.includes("評等") || h.includes("評價") || h.toLowerCase().includes("rating"))
+        };
+
+        // Fallback sequentially if auto-detect fails
+        if (headerIndex.code === -1) headerIndex.code = 1;
+        if (headerIndex.name === -1) headerIndex.name = 2;
+        if (headerIndex.position === -1) headerIndex.position = 3;
+        if (headerIndex.peAnchor === -1) headerIndex.peAnchor = 4;
+        if (headerIndex.entryDate === -1) headerIndex.entryDate = 5;
+        if (headerIndex.entryPrice === -1) headerIndex.entryPrice = 6;
+        if (headerIndex.exitDate === -1) headerIndex.exitDate = 7;
+        if (headerIndex.exitPrice === -1) headerIndex.exitPrice = 8;
+        if (headerIndex.qty === -1) headerIndex.qty = 9;
+        if (headerIndex.planStop === -1) headerIndex.planStop = 10;
+        if (headerIndex.planTarget === -1) headerIndex.planTarget = 11;
+        if (headerIndex.netPnL === -1) headerIndex.netPnL = 12;
+        if (headerIndex.rating === -1) headerIndex.rating = 13;
+
+        for (let i = 1; i < rows.length; i++) {
+          const raw = rows[i].trim();
+          if (!raw) continue;
+
+          let cols = [];
+          let currentStr = "";
+          let inQuotes = false;
+          for (let j = 0; j < raw.length; j++) {
+            const char = raw[j];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              cols.push(currentStr.trim());
+              currentStr = "";
+            } else {
+              currentStr += char;
+            }
+          }
+          cols.push(currentStr.trim());
+          cols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+
+          if (cols.length > 5) {
+            const getValue = (idx, fallback = "") => (idx !== -1 && idx < cols.length) ? cols[idx] : fallback;
+
+            const id = getValue(headerIndex.id) || ("TR" + Date.now() + "_" + Math.floor(Math.random() * 1000) + "_" + i);
+            const code = getValue(headerIndex.code, "DEMO");
+            const name = getValue(headerIndex.name, "未命名");
+            const position = getValue(headerIndex.position, "底倉");
+            const peAnchor = getValue(headerIndex.peAnchor, "普通");
+            const entryDate = getValue(headerIndex.entryDate, getTodayDateString());
+            const entryPrice = parseFloat(getValue(headerIndex.entryPrice, "0")) || 0;
+            const exitDate = getValue(headerIndex.exitDate, "");
+            const exitPrice = parseFloat(getValue(headerIndex.exitPrice, "0")) || 0;
+            const qty = parseInt(getValue(headerIndex.qty, "1")) || 1;
+            const planStop = parseFloat(getValue(headerIndex.planStop, "0")) || 0;
+            const planTarget = parseFloat(getValue(headerIndex.planTarget, "0")) || 0;
+            const netPnL = parseFloat(getValue(headerIndex.netPnL, "0")) || 0;
+            const rating = getValue(headerIndex.rating, "🟢好交易");
+
+            // Automatically detect isClosed if there is a valid exit date
+            const isClosed = (exitDate && exitDate !== "持倉中，尚未平倉" && exitDate !== "⏳持倉中" && exitDate !== "持倉中") ? true : false;
+
+            parsedTrades.push({
+              id, code, name, position, peAnchor, entryDate, entryPrice, exitDate, exitPrice, qty, planStop, planTarget, netPnL, rating, isClosed
+            });
+          }
+        }
+        return parsedTrades;
+      }
+
+      function showCSVImportPreview(fileName, newTradesList) {
+        return new Promise((resolve) => {
+          let rowsHtml = "";
+          
+          newTradesList.forEach((tr, index) => {
+            const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+            const isEntryDateOk = datePattern.test(tr.entryDate);
+            const isExitDateOk = tr.isClosed ? datePattern.test(tr.exitDate) : true;
+            const isQtyOk = !isNaN(tr.qty) && tr.qty > 0;
+            const isEntryPriceOk = !isNaN(tr.entryPrice) && tr.entryPrice > 0;
+            
+            const pnlClass = tr.netPnL > 0 ? "text-profit font-semibold" : (tr.netPnL < 0 ? "text-loss font-semibold" : "text-gray-300");
+            const pnlDisplay = tr.isClosed ? `${tr.netPnL > 0 ? '+' : ''}${formatNumber(tr.netPnL)}` : `<span class="text-orange-400 text-[10.5px]">⏳ 持倉中</span>`;
+
+            rowsHtml += `
+              <tr class="border-b border-[#1e293b]/50 hover:bg-[#1a2b4b]/20 transition-all font-mono text-[11px]">
+                <td class="px-3 py-2 text-gray-500">${index + 1}</td>
+                <td class="px-3 py-2">
+                  <span class="text-white font-semibold text-xs">${tr.code}</span>
+                  <div class="text-[9.5px] text-gray-400 truncate max-w-[110px]" title="${tr.name}">${tr.name}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-terminal-accent/30 text-slate-300 font-mono">${tr.position}</span>
+                  <div class="text-[9px] text-gray-400 mt-0.5">${tr.peAnchor}</div>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="${isEntryDateOk ? 'text-gray-300' : 'text-amber-400 font-bold decoration-dashed underline'}">${tr.entryDate}</span>
+                  ${isEntryDateOk ? '' : `<div class="text-[8.5px] text-amber-500">格式不符</div>`}
+                </td>
+                <td class="px-3 py-2 text-right ${isEntryPriceOk ? 'text-gray-300' : 'text-amber-400 font-bold underline'}">
+                  ${tr.entryPrice.toFixed(1)}
+                </td>
+                <td class="px-3 py-2">
+                  ${tr.isClosed ? 
+                    `<span class="${isExitDateOk ? 'text-gray-300' : 'text-amber-400 font-bold decoration-dashed underline'}">${tr.exitDate}</span>` : 
+                    `<span class="text-orange-400 text-[10px] font-mono">⏳ 持倉</span>`
+                  }
+                  ${(tr.isClosed && !isExitDateOk) ? `<div class="text-[8.5px] text-amber-500">格式不符</div>` : ''}
+                </td>
+                <td class="px-3 py-2 text-right">
+                  ${tr.isClosed ? tr.exitPrice.toFixed(1) : `<span class="text-gray-500">-</span>`}
+                </td>
+                <td class="px-3 py-2 text-right ${isQtyOk ? 'text-gray-300' : 'text-amber-400 font-bold underline'}">
+                  ${tr.qty}
+                </td>
+                <td class="px-3 py-2 text-right ${pnlClass}">
+                  ${pnlDisplay}
+                </td>
+                <td class="px-3 py-2 text-center text-[10px]">
+                  ${tr.rating}
+                </td>
+              </tr>
+            `;
+          });
+
+          const backdrop = document.createElement('div');
+          backdrop.className = "fixed inset-0 bg-[#070b13]/85 backdrop-blur-md z-[9999] flex items-center justify-center p-4 opacity-0 transition-opacity duration-200";
+
+          const box = document.createElement('div');
+          box.className = "bg-[#0d1424] border border-[#1e293b] rounded-2xl shadow-2xl p-6 max-w-4xl w-full transform scale-95 transition-all duration-200 flex flex-col h-[85vh] max-h-[700px]";
+
+          box.innerHTML = `
+            <div class="flex items-center justify-between border-b border-[#1e293b] pb-4 mb-4 select-none">
+              <div>
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2 font-sans">
+                  <span>📥</span>
+                  <span>CSV 匯入明細預覽 & 格式稽核</span>
+                </h3>
+                <p class="text-[11px] text-gray-400 mt-1">
+                  來源檔案：<strong class="text-[#38bdf8] font-mono">${fileName}</strong> &nbsp;|&nbsp;
+                  解析成功：<strong class="text-profit font-mono">${newTradesList.length}</strong> 筆覆盤交易
+                </p>
+              </div>
+              <button id="csv-preview-close" class="text-gray-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800/40 cursor-pointer flex items-center justify-center w-7 h-7">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="lucide lucide-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            <div class="flex-1 overflow-auto border border-terminal-accent/30 rounded-xl bg-terminal-bg/10 p-1 mb-5">
+              <table class="w-full text-left border-collapse min-w-[750px]">
+                <thead>
+                  <tr class="bg-[#121824] border-b border-[#1e293b] text-slate-400 font-bold text-[11px] tracking-wide select-none">
+                    <th class="px-3 py-2.5 font-sans">#</th>
+                    <th class="px-3 py-2.5 font-sans">商品代碼/名稱</th>
+                    <th class="px-3 py-2.5 font-sans">部位屬性/定錨</th>
+                    <th class="px-3 py-2.5 font-sans">進場日期</th>
+                    <th class="px-3 py-2.5 font-sans text-right">進場價</th>
+                    <th class="px-3 py-2.5 font-sans">出場日期</th>
+                    <th class="px-3 py-2.5 font-sans text-right">出場價</th>
+                    <th class="px-3 py-2.5 font-sans text-right">口數</th>
+                    <th class="px-3 py-2.5 font-sans text-right">淨損益</th>
+                    <th class="px-3 py-2.5 font-sans text-center">評等</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[#1e293b] pt-4 mt-auto">
+              <div class="text-[11px] text-gray-400 leading-relaxed max-w-md font-sans select-none">
+                💡 <strong>數據整併提示：</strong>
+                您可以選擇將這些交易與現有明細 <span class="text-profit font-bold">合併累加</span>，或是完全 <span class="text-loss font-bold">覆蓋替換</span> 所有舊資料本機暫存。
+              </div>
+              <div class="flex items-center gap-2 justify-end font-sans">
+                <button type="button" id="csv-preview-cancel" class="px-4 py-2 border border-[#1e293b] bg-transparent hover:bg-slate-800/40 text-slate-400 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  取消匯入
+                </button>
+                <button type="button" id="csv-preview-merge" class="px-4 py-2 bg-[#213547]/60 hover:bg-[#213547] text-profit border border-profit/40 hover:border-profit rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow select-none active:scale-95">
+                  📥 合併累加
+                </button>
+                <button type="button" id="csv-preview-overwrite" class="px-4 py-2 bg-gradient-to-r from-loss/20 to-loss/35 hover:from-loss/35 hover:to-loss/50 text-loss border border-loss/50 hover:border-loss rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow select-none active:scale-95">
+                  ⚠️ 覆蓋舊資料
+                </button>
+              </div>
+            </div>
+          `;
+
+          backdrop.appendChild(box);
+          document.body.appendChild(backdrop);
+
+          // Apply visual show transition
+          requestAnimationFrame(() => {
+            backdrop.classList.add('opacity-100');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+          });
+
+          function cleanup(action) {
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+              backdrop.remove();
+              resolve(action);
+            }, 200);
+          }
+
+          backdrop.querySelector('#csv-preview-cancel').addEventListener('click', () => cleanup('cancel'));
+          backdrop.querySelector('#csv-preview-close').addEventListener('click', () => cleanup('cancel'));
+          backdrop.querySelector('#csv-preview-merge').addEventListener('click', () => cleanup('merge'));
+          backdrop.querySelector('#csv-preview-overwrite').addEventListener('click', () => cleanup('overwrite'));
+
+          backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) cleanup('cancel');
+          });
+        });
+      }
+
       function importTradesFromCSV(event) {
         const file = event.target.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = async function(e) {
-          const rows = e.target.result.split("\n"); if (rows.length < 2) return;
-          let newTradesList = [];
-          for (let i = 1; i < rows.length; i++) {
-            const raw = rows[i].trim(); if (!raw) continue;
-            const cols = (raw.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || []).map(m => m.replace(/^"|"$/g, ''));
-            if (cols.length > 5) newTradesList.push({ id: cols[0], code: cols[1], name: cols[2], position: cols[3], peAnchor: cols[4], entryDate: cols[5], entryPrice: parseFloat(cols[6]), exitDate: cols[7], exitPrice: parseFloat(cols[8]), qty: parseInt(cols[9]), planStop: parseFloat(cols[10]), planTarget: parseFloat(cols[11]), netPnL: parseFloat(cols[12]), rating: cols[13] });
+          const parsedList = parseCSVText(e.target.result);
+          if (parsedList.length === 0) {
+            alert("❌ 格式不支援：未能解析出任何有效的覆盤明細，請檢查 CSV 檔案行與標頭格式是否相符。");
+            return;
           }
-          if (newTradesList.length > 0) { state.trades = [...state.trades, ...newTradesList]; saveDataToStorage(); recalculateCoreStats(); renderDashboard(); alert("匯入成功！"); }
-        }; reader.readAsText(file);
+
+          // Open the beautiful preview dialogue
+          const action = await showCSVImportPreview(file.name, parsedList);
+          
+          if (action === 'merge') {
+            state.trades = [...state.trades, ...parsedList];
+            saveDataToStorage();
+            recalculateCoreStats();
+            renderDashboard();
+            renderLog();
+            showNotification("✅ 成功合併", `已成功將 ${parsedList.length} 筆覆盤明細合併至現有帳戶中！`, "success");
+          } else if (action === 'overwrite') {
+            // Confirm overwrite to double guard user from accidental lose of metrics
+            if (await showCustomConfirm("⚠️ 破壞性覆蓋確認", "覆蓋後，您目前的覆盤明細將永遠消失！確定要用此 CSV 完整替換現有數據嗎？")) {
+              state.trades = parsedList;
+              saveDataToStorage();
+              recalculateCoreStats();
+              renderDashboard();
+              renderLog();
+              showNotification("🌪️ 成功覆蓋", `本機所有資料已完全被 CSV 中的 ${parsedList.length} 筆明細覆蓋替換！`, "success");
+            }
+          }
+          // Reset file input so users can reselect the same file if wanted
+          event.target.value = '';
+        }; 
+        reader.readAsText(file);
       }
 
       // ==========================================
@@ -3416,7 +3467,434 @@
       }
 
       async function exportDashboardToPDF() {
-        alert("✨ 系統提示：此功能目前因截圖模組已卸載，請使用截圖方式留存。");
+        if (state.trades.length === 0) {
+          alert("✨ 系統提示：目前尚無交易數據，請先記錄一些交易覆盤後再導出統計月報。");
+          return;
+        }
+
+        const closedTrades = state.trades.filter(tr => tr.isClosed !== false);
+        if (closedTrades.length === 0) {
+          alert("✨ 系統提示：目前尚無已平倉（已結案）的交易紀錄，請先將至少一筆交易設為「已平倉」並儲存，以利產出績效圖表。");
+          return;
+        }
+
+        showNotification("⚙️ PDF 月報生成中", "正在計算動能矩陣並繪製高保真圖表，請稍候...", "success");
+
+        // 準備統計變數
+        const initialCapital = Number(state.settings.initialCapital);
+        const cumulativeNet = statsCache.totalNetPnL;
+        const totalEquity = statsCache.equity;
+        const winRatePct = (statsCache.winRate * 100).toFixed(1);
+        const profitFactorStr = statsCache.profitFactor.toFixed(2);
+        const expectedValueStr = statsCache.expectedValue >= 0 
+          ? `+${statsCache.expectedValue.toFixed(1)}` 
+          : statsCache.expectedValue.toFixed(1);
+        const maxDdStr = statsCache.maxDrawdown.toFixed(2);
+        const tradeCount = statsCache.tradeCount;
+        const goodCount = statsCache.goodCount;
+        const badCount = statsCache.badCount;
+
+        // 提取日期區間
+        const sortedChrono = [...closedTrades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        const startDate = sortedChrono[0].entryDate;
+        const endDate = sortedChrono[sortedChrono.length - 1].entryDate;
+
+        // 紀律品質評等
+        let disciplineRating = "🟢 優良紀律";
+        let disciplineColor = "text-emerald-400";
+        let ratingReason = "身心冷靜、紀律完好。請日後落實停利停損。";
+
+        const badRatio = tradeCount > 0 ? (badCount / tradeCount) : 0;
+        if (badCount === 0) {
+          disciplineRating = "👑 完美紀律";
+          disciplineColor = "text-amber-400 font-extrabold";
+          ratingReason = "本期您如同一台冷血的賺錢機器，完全死守停損防守位，不帶一絲情緒。繼續深信這份正期望值，您已超越市場上 95% 的妄信散戶！";
+        } else if (badRatio <= 0.15) {
+          disciplineRating = "🟢 穩定紀律";
+          disciplineColor = "text-emerald-400 font-bold";
+          ratingReason = "在少數交易中雖有微幅情緒波動，但整體仍站在大山之上落實保護性守位。這份微小的情緒溢酬仍在風控容許值之內。";
+        } else if (badRatio <= 0.35) {
+          disciplineRating = "⚠️ 警惕波動";
+          disciplineColor = "text-yellow-400 font-bold animate-pulse";
+          ratingReason = "情緒性壞交易比例開始攀升！可能存在頻繁抗單或停損太貼近隨機雜訊，請立即重新將防守位定錨於 POC 籌碼密集區之上。";
+        } else {
+          disciplineRating = "🚨 紀律亮紅燈";
+          disciplineColor = "text-[#f43f5e] font-extrabold animate-pulse";
+          ratingReason = "致命警告！您的「壞交易」高達 " + (badRatio*100).toFixed(0) + "%。這是對本金的慢性謀殺。強烈建議您立即閉盤檢討，回歸 1.5% - 6% 動能核心紀律防守！";
+        }
+
+        // 商品損益排行
+        const productPnL = {};
+        closedTrades.forEach(tr => {
+          const code = (tr.code || "DEMO").trim().toUpperCase();
+          const name = (tr.name || "未命名").trim();
+          const key = `${code} ${name}`;
+          productPnL[key] = (productPnL[key] || 0) + (Number(tr.netPnL) || 0);
+        });
+        const sortedProducts = Object.entries(productPnL).sort((a, b) => b[1] - a[1]);
+        const topWinners = sortedProducts.slice(0, 3).filter(x => x[1] > 0);
+        const topLosers = sortedProducts.slice(-3).reverse().filter(x => x[1] < 0);
+
+        // 建立臨時的 OFF屏 容器
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '-10000px';
+        container.style.width = '794px';
+        container.style.minHeight = '1123px';
+        container.style.backgroundColor = '#060a13';
+        container.style.padding = '30px';
+        container.style.zIndex = '-9999';
+        container.id = 'pdf-report-temp-container';
+
+        container.innerHTML = `
+          <!-- PDF Body -->
+          <div class="flex flex-col h-full text-slate-100 font-sans" style="font-family: 'JetBrains Mono', 'PingFang TC', 'Microsoft JhengHei', sans-serif;">
+            
+            <!-- Page Header -->
+            <div class="flex justify-between items-start border-b-2 border-slate-800 pb-5 mb-5">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">🏆</span>
+                  <h1 class="text-lg font-black tracking-widest text-white uppercase">阿魯米動能交易系統</h1>
+                </div>
+                <h2 class="text-[12px] font-bold text-[#10b981] tracking-wider uppercase mt-1">
+                  KAMA SYSTEM • MOMENTUM CLINICAL PERFORMANCE AUDIT
+                </h2>
+                <div class="text-[9px] text-[#2cbd6f]/70 font-mono mt-0.5">授權對象：${state.settings.userEmail || "自營部交易員"} &nbsp;|&nbsp; 報告ID: AUDIT-${Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+              </div>
+              <div class="text-right">
+                <div class="bg-slate-900 border border-slate-800 rounded px-2.5 py-1 inline-block">
+                  <div class="text-[9px] text-gray-500 font-mono">審計日期區間</div>
+                  <div class="text-[11px] font-bold text-white font-mono mt-0.5">${startDate} ~ ${endDate}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Grid Dashboard -->
+            <div class="grid grid-cols-4 gap-4 mb-5">
+              
+              <!-- Total PnL Card -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-gray-500 text-[10px] font-bold tracking-wider uppercase block">累計帳戶淨值</span>
+                <span class="text-lg font-mono tracking-tight text-white mt-1 font-extrabold">
+                  $${formatNumber(totalEquity)}
+                </span>
+                <div class="mt-1.5 text-[10px] flex items-center gap-1 font-semibold ${cumulativeNet >= 0 ? "text-[#10b981]" : "text-[#f43f5e]"}" style="line-height: normal;">
+                  <span>${cumulativeNet >= 0 ? "▲" : "▼"}</span>
+                  <span>$${cumulativeNet >= 0 ? "+" : ""}${formatNumber(cumulativeNet)} 淨利</span>
+                </div>
+              </div>
+
+              <!-- Win Rate Card -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-gray-500 text-[10px] font-bold tracking-wider uppercase block">動能總勝率</span>
+                <span class="text-lg font-mono tracking-tight text-[#38bdf8] mt-1 font-extrabold">
+                  ${winRatePct}%
+                </span>
+                <div class="mt-1.5 text-[10px] text-gray-400 font-mono" style="line-height: normal;">
+                  <span>獲利因子: ${profitFactorStr}</span>
+                </div>
+              </div>
+
+              <!-- Expectancy Card -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-gray-500 text-[10px] font-bold tracking-wider uppercase block">單筆數學期望值</span>
+                <span class="text-lg font-mono tracking-tight text-amber-400 mt-1 font-extrabold">
+                  $${formatNumber(Math.abs(statsCache.expectedValue).toFixed(0))}
+                </span>
+                <div class="mt-1.5 text-[10px] flex items-center justify-between text-gray-400 font-mono" style="line-height: normal;">
+                  <span>EV: ${expectedValueStr}</span>
+                </div>
+              </div>
+
+              <!-- Discipline Rating Card -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-gray-500 text-[10px] font-bold tracking-wider uppercase block">心態紀律評等</span>
+                <span class="text-xs font-extrabold mt-1 block tracking-wide truncate ${disciplineColor}">
+                  ${disciplineRating}
+                </span>
+                <div class="mt-1.5 text-[10px] text-gray-400 font-mono flex justify-between" style="line-height: normal;">
+                  <span>交易: ${tradeCount} 筆</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Equity Curve Title and Section -->
+            <div class="bg-[#0b1120] border border-slate-800 rounded-2xl p-4 mb-5">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-[#10b981] text-xs">📈</span>
+                  <span class="text-[11px] font-black text-white font-mono uppercase tracking-wider">資金帳戶權益累積曲線與資產高點定錨</span>
+                </div>
+                <span class="text-[9px] text-gray-500 font-mono">INITIAL BALANCE: $${formatNumber(initialCapital)}</span>
+              </div>
+              
+              <div class="flex justify-center" style="height: 220px;">
+                <canvas id="pdf-equity-curve-canvas" width="714" height="215"></canvas>
+              </div>
+            </div>
+
+            <!-- Two Column Detail Layout -->
+            <div class="grid grid-cols-2 gap-4 mb-5">
+              
+              <!-- Left Column: Visual Doughnuts -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                <div class="border-b border-slate-800 pb-2 mb-3">
+                  <span class="text-[11px] font-black text-white uppercase tracking-wider font-mono">📊 動能勝率與評等環形圖</span>
+                </div>
+                
+                <div class="flex justify-around items-center h-[140px]">
+                  <!-- Doughnut 1: Win Lose -->
+                  <div class="flex flex-col items-center">
+                    <div style="width: 100px; height: 100px; position: relative;">
+                      <canvas id="pdf-doughnut-winlose" width="100" height="100"></canvas>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 mt-2">勝率分佈 (${winRatePct}%)</span>
+                  </div>
+
+                  <!-- Doughnut 2: Good Bad -->
+                  <div class="flex flex-col items-center">
+                    <div style="width: 100px; height: 100px; position: relative;">
+                      <canvas id="pdf-doughnut-goodbad" width="100" height="100"></canvas>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 mt-2">好壞交易比</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Top Winners and Losers list -->
+              <div class="bg-[#0b1120] border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                <div class="border-b border-slate-800 pb-2 mb-2">
+                  <span class="text-[11px] font-black text-white uppercase tracking-wider font-mono">🏆 個股期貨商品戰績排行</span>
+                </div>
+                
+                <div class="flex-1 flex flex-col justify-around text-xs leading-relaxed py-1 space-y-2">
+                  <div>
+                    <div class="text-[10px] font-bold text-emerald-400 mb-1 flex items-center gap-1">
+                      <span>🟢</span> <span>本時期獲利波段前三強</span>
+                    </div>
+                    <div class="space-y-1 font-mono text-[10px]">
+                      ${
+                        topWinners.length > 0 
+                          ? topWinners.map((w, idx) => `
+                              <div class="flex justify-between border-b border-dashed border-slate-800/60 pb-0.5">
+                                <span class="text-white font-semibold">${idx + 1}. ${w[0]}</span>
+                                <span class="text-[#10b981] font-bold">+$${formatNumber(w[1].toFixed(0))}</span>
+                              </div>
+                            `).join('') 
+                          : `<div class="text-gray-500 italic text-[9.5px]">暫無明顯獲利商品</div>`
+                      }
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="text-[10px] font-bold text-[#f43f5e] mb-1 flex items-center gap-1">
+                      <span>🔴</span> <span>回檔重倉或停損警示</span>
+                    </div>
+                    <div class="space-y-1 font-mono text-[10px]">
+                      ${
+                        topLosers.length > 0 
+                          ? topLosers.map((l, idx) => `
+                              <div class="flex justify-between border-b border-dashed border-slate-800/60 pb-0.5">
+                                <span class="text-white font-semibold">${idx + 1}. ${l[0]}</span>
+                                <span class="text-[#f43f5e] font-bold">-$${formatNumber(Math.abs(l[1]).toFixed(0))}</span>
+                              </div>
+                            `).join('') 
+                          : `<div class="text-gray-500 italic text-[9.5px]">暫無明顯停損商品</div>`
+                      }
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Cold Blood Strategist Summary -->
+            <div class="bg-gradient-to-r from-slate-900 to-[#0e1628] border border-slate-800 rounded-2xl p-4 flex items-start gap-4 mb-4">
+              <div class="bg-[#121c33] p-2 text-xl font-bold rounded-xl border border-slate-700 select-none">
+                🧠
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[11px] font-black text-amber-400 uppercase tracking-widest font-mono">冷血軍師核心月度覆盤點評</span>
+                  <span class="bg-amber-950/50 border border-amber-500/30 text-amber-400 text-[8.5px] px-2 py-0.5 rounded font-bold font-mono">阿魯米認證</span>
+                </div>
+                <p class="text-[10.5px] text-gray-300 leading-relaxed font-sans italic">
+                  「${ratingReason}」
+                </p>
+              </div>
+            </div>
+
+            <!-- PDF Footer -->
+            <div class="flex justify-between items-center border-t border-slate-800/80 pt-4 text-[9px] text-gray-500 font-mono mt-auto">
+              <div>KAMA SYSTEM CLINICAL LAB REPORT V3.1.2</div>
+              <div class="text-right">
+                紀律是唯一的生存法則，執行勝於一切・雙軌制風控定錨
+              </div>
+            </div>
+
+          </div>
+        `;
+
+        document.body.appendChild(container);
+
+        // 1. Line Chart 繪製 (Equity Curve)
+        const lineCtx = document.getElementById('pdf-equity-curve-canvas').getContext('2d');
+        
+        let runValue = initialCapital;
+        let peakValue = initialCapital;
+        const dataPoints = [initialCapital];
+        const runningMaxPoints = [initialCapital];
+        const labels = ['初始'];
+        
+        sortedChrono.forEach(tr => {
+          runValue += Number(tr.netPnL || 0);
+          dataPoints.push(runValue);
+          labels.push(`${tr.entryDate.substring(5)} (${tr.code})`);
+          if (runValue > peakValue) peakValue = runValue;
+          runningMaxPoints.push(peakValue);
+        });
+
+        const pdfLineChart = new Chart(lineCtx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '帳戶淨值',
+                data: dataPoints,
+                borderColor: '#10b981',
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                tension: 0.15,
+                pointBackgroundColor: (ctx) => dataPoints[ctx.dataIndex] >= initialCapital ? '#10b981' : '#ef4444',
+                pointRadius: sortedChrono.length > 25 ? 0 : 3
+              },
+              {
+                label: '資產高點',
+                data: runningMaxPoints,
+                borderColor: '#f59e0b',
+                borderWidth: 1,
+                borderDash: [4, 4],
+                fill: false,
+                tension: 0,
+                pointRadius: 0
+              }
+            ]
+          },
+          options: {
+            responsive: false,
+            animation: false,
+            plugins: {
+              legend: {
+                display: true,
+                labels: {
+                  color: '#94a3b8',
+                  font: { size: 9, family: 'sans-serif' }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: '#64748b',
+                  font: { size: 8 }
+                },
+                grid: {
+                  color: 'rgba(30, 41, 59, 0.4)'
+                }
+              },
+              y: {
+                ticks: {
+                  color: '#94a3b8',
+                  font: { size: 8 }
+                },
+                grid: {
+                  color: 'rgba(30, 41, 59, 0.4)'
+                }
+              }
+            }
+          }
+        });
+
+        // 2. Doughnut 1 (Win / Lose)
+        const winCount = sortedChrono.filter(t => Number(t.netPnL) > 0).length;
+        const lossCount = sortedChrono.filter(t => Number(t.netPnL) < 0).length;
+        const flatCount = sortedChrono.length - winCount - lossCount;
+
+        const d1Ctx = document.getElementById('pdf-doughnut-winlose').getContext('2d');
+        const pdfD1Chart = new Chart(d1Ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['勝', '敗', '平'],
+            datasets: [{
+              data: [winCount, lossCount, flatCount],
+              backgroundColor: ['#10b981', '#ef4444', '#64748b'],
+              borderWidth: 1,
+              borderColor: '#060a13'
+            }]
+          },
+          options: {
+            responsive: false,
+            animation: false,
+            cutout: '65%',
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+
+        // 3. Doughnut 2 (Good / Bad)
+        const d2Ctx = document.getElementById('pdf-doughnut-goodbad').getContext('2d');
+        const pdfD2Chart = new Chart(d2Ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['好交易', '壞交易', '未評評'],
+            datasets: [{
+              data: [goodCount, badCount, tradeCount - goodCount - badCount],
+              backgroundColor: ['#10b981', '#ef4444', '#1e293b'],
+              borderWidth: 1,
+              borderColor: '#060a13'
+            }]
+          },
+          options: {
+            responsive: false,
+            animation: false,
+            cutout: '65%',
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+
+        // html2pdf 設定
+        const opt = {
+          margin: [0.35, 0.35, 0.35, 0.35],
+          filename: `KAMA_動能交易績效審計報告_${endDate}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        // 稍微等待讓 Charts 徹底刷繪完畢後執行
+        setTimeout(() => {
+          html2pdf().from(container).set(opt).save().then(() => {
+            // 從記憶體回收 Chart 實例
+            pdfLineChart.destroy();
+            pdfD1Chart.destroy();
+            pdfD2Chart.destroy();
+            // 移除臨時 DOM
+            container.remove();
+            showNotification("✅ 匯出成功", "精美動能績效統計月報已成功下載！", "success");
+          }).catch(err => {
+            console.error(err);
+            try { container.remove(); } catch(e){}
+            alert("❌ 月報匯出失敗，請重試或查看開發控制台。");
+          });
+        }, 200);
       }
     </script>
   </body>
