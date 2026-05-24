@@ -590,7 +590,7 @@
                       <option value="[A-2] 大單打路後回測量能真空區">[A-2] 大單打路後回測量能真空區</option>
                       <option value="[A-3] KAMA系統異常量能發動">[A-3] KAMA系統異常量能發動</option>
                       <option value="[A-5] 原部位轉倉">[A-5] 原部位轉倉</option>
-                      <option value="[A-4] 酒精衝動 / 怕買不到追高（檢討用）">[A-4] 酒精衝動 / 怕買不到追高（檢討用）</option>
+                      <option value="[A-4] 追高衝動 / 怕買不到追高（檢討用）">[A-4] 追高衝動 / 怕買不到追高（檢討用）</option>
                     </select>
                   </div>
                 </div>
@@ -1573,7 +1573,13 @@
             trRow.onclick = () => { switchTab('log'); document.getElementById('log-search-input').value = tr.code; triggerLogSearch(tr.code); };
             trRow.innerHTML = `
               <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${entryFormatted}</td>
-              <td class="px-4 py-4.5 text-sm font-semibold text-white">${tr.code} <span class="text-xs text-gray-400 font-light ml-1">${tr.name}</span></td>
+              <td class="px-4 py-4.5 font-semibold text-white">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-bold text-white">${tr.code}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9.5px] bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/20 font-mono font-extrabold">${tr.qty}口</span>
+                </div>
+                <span class="block text-[10.5px] text-gray-400 font-normal mt-0.5">${tr.name}</span>
+              </td>
               <td class="px-4 py-4.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-terminal-accent/40 text-blue-300">${tr.position}</span></td>
               <td class="px-4 py-4.5 text-xs font-mono">${priceFlowStr}</td>
               <td class="px-4 py-4.5 text-sm font-bold ${trColor} font-mono">${pnlDisplayStr}</td>
@@ -1592,7 +1598,7 @@
         const ctx = document.getElementById('mini-equity-chart').getContext('2d');
         if (state.charts.mini) state.charts.mini.destroy();
 
-        const sortedChrono = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate));
+        const sortedChrono = [...state.trades].sort((a, b) => new Date(a.entryDate) - new Date(b.entryDate) || a.id.localeCompare(b.id));
         let initialCap = Number(state.settings.initialCapital);
         let dataPoints = [initialCap];
         let labels = ['初始'];
@@ -1618,7 +1624,75 @@
             }]
           },
           options: {
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                enabled: true,
+                backgroundColor: '#111827',
+                borderColor: '#1f2937',
+                borderWidth: 1.5,
+                titleColor: '#ffffff',
+                titleFont: { size: 12, weight: 'bold', family: 'Inter, system-ui' },
+                bodyColor: '#e5e7eb',
+                bodyFont: { size: 11, family: 'Inter, system-ui' },
+                padding: { top: 8, bottom: 8, left: 12, right: 12 },
+                cornerRadius: 8,
+                displayColors: false,
+                callbacks: {
+                  title: function(tooltipItems) {
+                    const item = tooltipItems[0];
+                    if (item.dataIndex === 0) {
+                      return '📌 初始帳戶資本';
+                    }
+                    const tr = sortedChrono[item.dataIndex - 1];
+                    return `📅 ${tr.entryDate} - ${tr.code}`;
+                  },
+                  label: function(context) {
+                    const idx = context.dataIndex;
+                    const lines = [];
+                    lines.push(`💳 帳戶淨值: $${context.parsed.y.toLocaleString('zh-TW')}`);
+                    if (idx > 0) {
+                      const tr = sortedChrono[idx - 1];
+                      const pnl = Number(tr.netPnL || 0);
+                      const sign = pnl >= 0 ? '+' : '';
+                      const pnlColor = pnl > 0 ? '🟢' : (pnl < 0 ? '🔴' : '⚪');
+                      lines.push(`${pnlColor} 該筆損益: ${sign}$${pnl.toLocaleString('zh-TW')}`);
+                      lines.push(`🎰 商品名稱: ${tr.name}`);
+                      lines.push(`💼 屬性分類: ${tr.position}`);
+                      lines.push(`🎲 交易口數: ${tr.qty} 口`);
+                      lines.push(`🎯 框架評等: ${tr.rating || '尚無'}`);
+                    } else {
+                      lines.push(`ℹ️ 交易覆盤起點`);
+                    }
+                    return lines;
+                  }
+                }
+              }
+            },
+            onClick: function(event, elements) {
+              if (elements && elements.length > 0) {
+                const elementIndex = elements[0].index;
+                if (elementIndex === 0) {
+                  // Clicked on initial capital
+                  state.logSelectedDate = null;
+                  state.logSearch = '';
+                  const searchInput = document.getElementById('log-search-input');
+                  if (searchInput) searchInput.value = '';
+                  renderLog();
+                  renderCalendar();
+                  switchTab('log');
+                  showNotification("🔔 顯示起點", "已為您切換至交易日誌並顯示完整歷史紀錄！", "success");
+                } else {
+                  const tr = sortedChrono[elementIndex - 1];
+                  if (tr) {
+                    setDateFilterFromChart(tr.entryDate);
+                    showNotification("🔍 篩選成功", `已切換至交易日誌，並自動為您顯示 ${tr.entryDate} 當日的所有交易！`, "success");
+                  }
+                }
+              }
+            },
             scales: {
               x: { grid: { color: 'rgba(31, 56, 100, 0.15)' }, ticks: { color: '#6B7280', font: { size: 9, family: 'JetBrains Mono' } } },
               y: { grid: { color: 'rgba(31, 56, 100, 0.15)' }, ticks: { color: '#6B7280', font: { size: 9, family: 'JetBrains Mono' }, callback: (v) => '$' + v.toLocaleString() } }
@@ -2192,7 +2266,7 @@
                 planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
             } else if (stopLossPct > 6.0) {
                 fieldAlert.className = "text-[10px] font-mono mt-1 px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-loss font-semibold";
-                fieldAlert.innerText = `⚠️ 【肥尾風險】停損 ${stopLossPct.toFixed(2)}% > 6.0% 上限，單邊曝險過大，引入極端肥尾風險！`;
+                fieldAlert.innerText = `⚠️ 【極端虧損風險】停損 ${stopLossPct.toFixed(2)}% > 6.0% 上限，單邊曝險過大，引入極大損失風險！`;
                 planStopInput.classList.add('border-red-500', 'bg-red-955/40', 'text-red-200');
                 planStopInput.classList.remove('border-terminal-accent', 'focus:border-profit');
             } else if (stopLossPct <= 2.5) {
@@ -2275,7 +2349,7 @@
                 alertEl.innerHTML = `❌ <strong>【太貼近隨機雜訊】</strong>初始停損僅 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 停損必須落在 [1.5% 到 6.0%]。過窄極易被隨機噪音洗出場。`;
               } else if (stopLossPct > 6.0) {
                 alertEl.className = "text-[11px] leading-relaxed select-none py-2.5 px-3 bg-red-950/50 border border-red-500/40 rounded-lg text-loss font-semibold text-left animate-pulse-subtle";
-                alertEl.innerHTML = `❌ <strong>【肥尾風險】</strong>初始停損高達 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 停損上限為 6.0%。過寬將暴露於極端單邊爆倉肥尾風險！`;
+                alertEl.innerHTML = `❌ <strong>【極端虧損風險】</strong>初始停損高達 <span class="font-bold underline">${stopLossPct.toFixed(2)}%</span>。<br>⚠️ 停損上限為 6.0%。過寬將暴露於極端單邊爆倉與巨大損失風險！`;
               } else {
                 if (riskOfCapitalPct > 2.0) {
                   alertEl.className = "text-[11px] leading-relaxed select-none py-2 px-3 bg-red-950/40 rounded-lg border border-red-500/30 text-rose-300 font-medium text-left";
@@ -2361,7 +2435,7 @@
                 stopLossViolationReason = `停損比為 ${stopLossPctForRating.toFixed(2)}%，未達 1.5% 最低下限（極易被隨機噪音洗出場）`;
             } else if (stopLossPctForRating > 6.0) {
                 isStopLossViolated = true;
-                stopLossViolationReason = `停損比為 ${stopLossPctForRating.toFixed(2)}%，超過 6.0% 上限（單邊曝險過大，引起極端肥尾風險）`;
+                stopLossViolationReason = `停損比為 ${stopLossPctForRating.toFixed(2)}%，超過 6.0% 上限（單邊曝險過大，有極端虧損風險）`;
             }
         }
 
@@ -2814,7 +2888,10 @@
               <td class="px-4 py-4.5 text-center text-xs text-gray-500 font-mono select-none" id="icon-indicator-${tr.id}">▶</td>
               <td class="px-4 py-4.5 text-xs text-gray-400 font-mono">${dateStr}</td>
               <td class="px-4 py-4.5 font-bold text-white text-sm">${tr.code} <span class="block text-[11px] font-normal text-gray-500">${tr.name}</span></td>
-              <td class="px-4 py-4.5 text-xs text-gray-400">${tr.type}</td>
+              <td class="px-4 py-4.5 text-xs text-gray-400">
+                <div>${tr.type}</div>
+                <div class="text-[10.5px] text-[#38bdf8] font-mono mt-0.5 font-bold">🎰 ${tr.qty} 口</div>
+              </td>
               <td class="px-4 py-4.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-terminal-accent/30 text-blue-300">${tr.position}</span></td>
               <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${tr.entryPrice.toFixed(1)}</td>
               <td class="px-4 py-4.5 text-right font-mono text-xs text-gray-300">${exitPriceStr}</td>
@@ -2929,6 +3006,23 @@
 
       function clearDateFilter() { state.logSelectedDate = null; renderLog(); }
       function filterDateFromCalendar(dateString) { state.logSelectedDate = state.logSelectedDate === dateString ? null : dateString; renderLog(); }
+      function setDateFilterFromChart(dateString) {
+        state.logSelectedDate = dateString;
+        state.logFilter = '全部';
+        state.logSearch = '';
+        const searchInput = document.getElementById('log-search-input');
+        if (searchInput) searchInput.value = '';
+        
+        document.querySelectorAll('#log-filter-buttons button').forEach(b => {
+          const clicks = b.getAttribute('onclick') || '';
+          if (clicks.includes("'全部'")) b.className = "px-3.5 py-1.5 text-xs font-bold rounded-lg bg-terminal-accent text-white border border-terminal-accent transition-all";
+          else b.className = "px-3.5 py-1.5 text-xs text-gray-400 hover:text-white font-medium rounded-lg border border-transparent transition-all";
+        });
+
+        renderLog();
+        renderCalendar();
+        switchTab('log');
+      }
       function formatBriefPnl(num) {
         if (num === 0) return "0";
         const abs = Math.abs(num);
