@@ -500,7 +500,7 @@
                         <span>單筆風險限額 (Risk %)</span>
                       </label>
                       <div class="relative">
-                        <input type="number" step="0.1" id="pos-calc-risk-pct" value="2.0" class="w-full bg-terminal-bg border border-terminal-accent/70 focus:border-profit rounded-lg pl-2.5 pr-6 py-1.5 text-xs text-white font-mono focus:outline-none" oninput="updateAutoPositionSizing()">
+                        <input type="number" step="any" id="pos-calc-risk-pct" value="2.0" class="w-full bg-terminal-bg border border-terminal-accent/70 focus:border-profit rounded-lg pl-2.5 pr-6 py-1.5 text-xs text-white font-mono focus:outline-none" oninput="updateAutoPositionSizing()">
                         <span class="absolute right-2.5 top-1.5 text-[11px] text-gray-400">%</span>
                       </div>
                     </div>
@@ -509,7 +509,7 @@
                         <span>商品停損比例 (Stop %)</span>
                       </label>
                       <div class="relative">
-                        <input type="number" step="0.1" id="pos-calc-stop-pct" placeholder="自動讀取" class="w-full bg-terminal-bg border border-terminal-accent/70 focus:border-profit rounded-lg pl-2.5 pr-6 py-1.5 text-xs text-white font-mono focus:outline-none" oninput="updateAutoPositionSizing('manual-stop-pct')">
+                        <input type="number" step="any" id="pos-calc-stop-pct" placeholder="自動讀取" class="w-full bg-terminal-bg border border-terminal-accent/70 focus:border-profit rounded-lg pl-2.5 pr-6 py-1.5 text-xs text-white font-mono focus:outline-none" oninput="updateAutoPositionSizing('manual-stop-pct')">
                         <span class="absolute right-2.5 top-1.5 text-[11px] text-gray-400">%</span>
                       </div>
                     </div>
